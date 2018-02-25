@@ -1,0 +1,152 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{D9D6E242-F8AF-46E4-B9FD-80ECBC20BA3E}</UniqueIdentifier>
+      <Extensions>qrc;*</Extensions>
+      <ParseFiles>false</ParseFiles>
+    </Filter>
+    <Filter Include="Form Files">
+      <UniqueIdentifier>{99349809-55BA-4b9d-BF79-8FDBB0286EB3}</UniqueIdentifier>
+      <Extensions>ui</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{D9D6E242-F8AF-46E4-B9FD-80ECBC20BA3E}</UniqueIdentifier>
+      <Extensions>qrc;*</Extensions>
+      <ParseFiles>false</ParseFiles>
+    </Filter>
+    <Filter Include="Generated Files">
+      <UniqueIdentifier>{71ED8ED8-ACB9-4CE9-BBE1-E00B30144E11}</UniqueIdentifier>
+      <Extensions>moc;h;cpp</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Gui">
+      <UniqueIdentifier>{953bd06c-73cc-409d-8399-b78d1d20b520}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gui\Render">
+      <UniqueIdentifier>{8e74e25c-9b55-4410-b277-5d776a36759e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CloudPlugins">
+      <UniqueIdentifier>{bcc761ad-b965-463f-a655-5b3275a7a09e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CloudPlugins\SurfaceGenerator">
+      <UniqueIdentifier>{e68a5159-302b-47e7-82d1-32d995ffb2fd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CloudPlugins\CloudContainer">
+      <UniqueIdentifier>{20990ffe-80dc-4bdd-8b54-92d19ebc17a0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CloudPlugins\DataGenerator">
+      <UniqueIdentifier>{de9f55c2-4569-4570-bd01-beda9eabf915}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gui\QTFails">
+      <UniqueIdentifier>{cb01e11c-d8d2-4131-a0ed-e03358ec0b3c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphicinterface.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\glrender.cpp">
+      <Filter>Gui\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_glrender.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_graphicinterface.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_glrender.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_graphicinterface.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\kdtree.cpp">
+      <Filter>CloudPlugins\CloudContainer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\datagenerator.cpp">
+      <Filter>CloudPlugins\DataGenerator</Filter>
+    </ClCompile>
+    <ClCompile Include="src\cloudcontainer.cpp">
+      <Filter>CloudPlugins\CloudContainer</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\qrc_sfc.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="src\graphicinterface.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\glrender.h">
+      <Filter>Gui\Render</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\sfc.ui">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Resources\sfc.qrc">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="GeneratedFiles\ui_sfc.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\cloudplugin.h">
+      <Filter>CloudPlugins</Filter>
+    </ClInclude>
+    <ClInclude Include="src\cloudcontainer.h">
+      <Filter>CloudPlugins\CloudContainer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\kdtree.h">
+      <Filter>CloudPlugins\CloudContainer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\defines.h">
+      <Filter>CloudPlugins</Filter>
+    </ClInclude>
+    <ClInclude Include="src\qnspinbox.h">
+      <Filter>Gui\QTFails</Filter>
+    </ClInclude>
+    <ClInclude Include="src\datagenerator.h">
+      <Filter>CloudPlugins\DataGenerator</Filter>
+    </ClInclude>
+    <ClInclude Include="src\taskscheduler.h">
+      <Filter>CloudPlugins</Filter>
+    </ClInclude>
+    <ClInclude Include="src\types.h">
+      <Filter>CloudPlugins</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Resources\images\side1.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Resources\images\side2.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Resources\images\side3.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Resources\images\side4.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Resources\images\side5.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Resources\images\side6.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resources\sfc.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

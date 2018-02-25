@@ -1,0 +1,456 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>sfcGUI</class>
+ <widget class="QMainWindow" name="sfcGUI">
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>813</width>
+    <height>642</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Surface Creator from Point Cloud</string>
+  </property>
+  <property name="autoFillBackground">
+   <bool>false</bool>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QMainWindow{
+background-color:#1d1d1d;
+}
+
+QWidget{
+background-color:#3d3d3d;
+color:#fff;
+}
+
+QMenuBar{
+background-color:#1d1d1d;
+padding:5px;
+font: 10pt &quot;Times New Roman&quot;;
+}
+
+QMenuBar::item{
+background-color:#1d1d1d;
+color:#fff;
+padding-right:10px;
+padding-left:10px;
+}
+
+QMenuBar::item:selected{
+background-color:#9d948c;
+color:#fff;
+}
+
+QMenu{
+background-color:#3d3d3d;
+color:#fff;
+}
+
+QMenu::item:selected{
+background-color:#9d948c;
+}
+
+QStatusBar{
+color:#fff;
+background-color:#1d1d1d;
+}
+
+QPushButton{
+border-style:solid;
+background-color:#a6a6a6;
+color:#fff;
+border-radius:5px;
+}
+
+QPushButton:hover{
+color:#ccc;
+background-color: qlineargradient(spread:pad, x:1:0.517, y1:0, x2:0.517, y2:1, stop:0 rgba(45,45,45,255), stop:0.505682 rgba(45,45,45,255), stop:1 rgba(29,29,29,255));
+border-color:#29d1d9;
+border-widht:2px;
+}
+
+QPushButton:pressed{
+background-color:  qlineargradient(spread:pad, x:1:0.517, y1:0, x2:0.517, y2:1, stop:0 rgba(29,29,29,255), stop:0.505682 rgba(45,45,45,255), stop:1 rgba(29,29,29,255));
+}
+
+QSpinBox{
+border-style:solid;
+background-color:#a6a6a6;
+color:#fff;
+border-radius:4px;
+}
+
+QComboBox{
+border-style:solid;
+background-color:#a6a6a6;
+color:#fff;
+border-radius:4px;
+}
+
+QStatusBar QLCDNumber{
+border: 1px solid red;
+border-radius: 3px;
+}
+
+QStatusBar QLabel{
+color:#fff;
+padding-left:5px;
+font: 8pt &quot;Times New Roman&quot;;
+}
+
+</string>
+  </property>
+  <widget class="QWidget" name="central">
+   <widget class="GLRender" name="glrender">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>551</width>
+      <height>581</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QWidget" name="operations" native="true">
+    <property name="geometry">
+     <rect>
+      <x>551</x>
+      <y>-3</y>
+      <width>261</width>
+      <height>601</height>
+     </rect>
+    </property>
+    <widget class="QWidget" name="layoutWidget">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>20</y>
+       <width>231</width>
+       <height>581</height>
+      </rect>
+     </property>
+     <layout class="QVBoxLayout" name="rightSide">
+      <item>
+       <widget class="QGroupBox" name="details">
+        <property name="title">
+         <string>Computations capacity</string>
+        </property>
+        <widget class="QLabel" name="label">
+         <property name="geometry">
+          <rect>
+           <x>30</x>
+           <y>20</y>
+           <width>101</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Processor Cores</string>
+         </property>
+        </widget>
+        <widget class="QNSpinBox" name="core">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="geometry">
+          <rect>
+           <x>150</x>
+           <y>20</y>
+           <width>42</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="readOnly">
+          <bool>false</bool>
+         </property>
+         <property name="accelerated">
+          <bool>false</bool>
+         </property>
+         <property name="keyboardTracking">
+          <bool>false</bool>
+         </property>
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>20</number>
+         </property>
+         <property name="value">
+          <number>1</number>
+         </property>
+        </widget>
+        <widget class="QLabel" name="label_2">
+         <property name="geometry">
+          <rect>
+           <x>30</x>
+           <y>40</y>
+           <width>47</width>
+           <height>13</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Threads</string>
+         </property>
+        </widget>
+        <widget class="QSpinBox" name="thread">
+         <property name="geometry">
+          <rect>
+           <x>150</x>
+           <y>40</y>
+           <width>42</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="keyboardTracking">
+          <bool>false</bool>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="compButton">
+         <property name="geometry">
+          <rect>
+           <x>80</x>
+           <y>70</y>
+           <width>75</width>
+           <height>23</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Stop</string>
+         </property>
+        </widget>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="draw">
+        <property name="title">
+         <string>Display</string>
+        </property>
+        <widget class="QLabel" name="label_3">
+         <property name="geometry">
+          <rect>
+           <x>20</x>
+           <y>20</y>
+           <width>47</width>
+           <height>13</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Type</string>
+         </property>
+        </widget>
+        <widget class="QWidget" name="layoutWidget">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>80</y>
+           <width>211</width>
+           <height>25</height>
+          </rect>
+         </property>
+         <layout class="QHBoxLayout" name="StepsOnTree">
+          <item>
+           <widget class="QPushButton" name="left_child">
+            <property name="text">
+             <string>Left child</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="right_child">
+            <property name="text">
+             <string>Right child</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="parent">
+            <property name="text">
+             <string>Parent</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QComboBox" name="display">
+         <property name="geometry">
+          <rect>
+           <x>80</x>
+           <y>20</y>
+           <width>61</width>
+           <height>20</height>
+          </rect>
+         </property>
+         <item>
+          <property name="text">
+           <string>Points</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Box</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Surface</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>All</string>
+          </property>
+         </item>
+        </widget>
+        <widget class="QLabel" name="label_4">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>60</y>
+           <width>91</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Moving direction</string>
+         </property>
+        </widget>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="algs">
+        <property name="title">
+         <string>Etc</string>
+        </property>
+        <widget class="QLabel" name="label_5">
+         <property name="geometry">
+          <rect>
+           <x>20</x>
+           <y>30</y>
+           <width>101</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Right now KDTree</string>
+         </property>
+        </widget>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_3">
+        <property name="title">
+         <string>GroupBox</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="sadsadsa">
+        <property name="title">
+         <string>j</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="performance" native="true">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>580</y>
+      <width>551</width>
+      <height>21</height>
+     </rect>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>813</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionNew"/>
+    <addaction name="actionOpen"/>
+    <addaction name="actionSave"/>
+    <addaction name="actionSave_as"/>
+    <addaction name="actionExport"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionInfo"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <action name="actionNew">
+   <property name="text">
+    <string>New</string>
+   </property>
+  </action>
+  <action name="actionOpen">
+   <property name="text">
+    <string>Open</string>
+   </property>
+  </action>
+  <action name="actionSave">
+   <property name="text">
+    <string>Save</string>
+   </property>
+  </action>
+  <action name="actionSave_as">
+   <property name="text">
+    <string>Save as...</string>
+   </property>
+  </action>
+  <action name="actionExport">
+   <property name="text">
+    <string>Export</string>
+   </property>
+  </action>
+  <action name="actionInfo">
+   <property name="text">
+    <string>Info</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>GLRender</class>
+   <extends>QOpenGLWidget</extends>
+   <header>glrender.h</header>
+  </customwidget>
+  <customwidget>
+   <class>QNSpinBox</class>
+   <extends>QSpinBox</extends>
+   <header>qnspinbox.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="../sfc.qrc"/>
+ </resources>
+ <connections/>
+</ui>

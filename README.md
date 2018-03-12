@@ -17,9 +17,9 @@ data format: x -y z r g b
                 ?? yes, I know
                 
 Incoming:
-+Voronoi Diagram calculation and display
-+http://web.cs.ucdavis.edu/~amenta/pubs/sm.pdf proceed
-+Let the user to use my kdtree
-+Linking CGAL with TBB to get better performance (just test needed)
-+adding config file
++ Voronoi Diagram calculation and display
++ http://web.cs.ucdavis.edu/~amenta/pubs/sm.pdf proceed
++ Let the user to use my kdtree
++ Linking CGAL with TBB to get better performance (just test needed)
++ adding config file
 + ...

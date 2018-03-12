@@ -39,11 +39,11 @@
     <Filter Include="CloudPlugins\CloudContainer">
       <UniqueIdentifier>{20990ffe-80dc-4bdd-8b54-92d19ebc17a0}</UniqueIdentifier>
     </Filter>
-    <Filter Include="CloudPlugins\DataGenerator">
-      <UniqueIdentifier>{de9f55c2-4569-4570-bd01-beda9eabf915}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Gui\QTFails">
       <UniqueIdentifier>{cb01e11c-d8d2-4131-a0ed-e03358ec0b3c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CloudPlugins\Cloud_InputOutput">
+      <UniqueIdentifier>{de9f55c2-4569-4570-bd01-beda9eabf915}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -53,46 +53,61 @@
     <ClCompile Include="src\graphicinterface.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
-    <ClCompile Include="src\glrender.cpp">
-      <Filter>Gui\Render</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_glrender.cpp">
-      <Filter>Generated Files</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_graphicinterface.cpp">
-      <Filter>Generated Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_glrender.cpp">
       <Filter>Generated Files</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_graphicinterface.cpp">
       <Filter>Generated Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\kdtree.cpp">
-      <Filter>CloudPlugins\CloudContainer</Filter>
-    </ClCompile>
-    <ClCompile Include="src\datagenerator.cpp">
-      <Filter>CloudPlugins\DataGenerator</Filter>
-    </ClCompile>
-    <ClCompile Include="src\cloudcontainer.cpp">
-      <Filter>CloudPlugins\CloudContainer</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\qrc_sfc.cpp">
       <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\glrender.cpp">
+      <Filter>Gui\Render</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_glrender.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_glrender.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\c_io.cpp">
+      <Filter>CloudPlugins\Cloud_InputOutput</Filter>
+    </ClCompile>
+    <ClCompile Include="src\surfacegenerator.cpp">
+      <Filter>CloudPlugins\SurfaceGenerator</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\graphicinterface.h">
       <Filter>Gui</Filter>
     </CustomBuild>
-    <CustomBuild Include="src\glrender.h">
-      <Filter>Gui\Render</Filter>
-    </CustomBuild>
     <CustomBuild Include="src\sfc.ui">
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="Resources\sfc.qrc">
       <Filter>Resource Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\new.ui">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\glrender.h">
+      <Filter>Gui\Render</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\new_outl_filter.ui">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\new_simpl_filter.ui">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\new_smoth_filter.ui">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\new_surf_rec.ui">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\filter_widget.ui">
+      <Filter>Gui</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -102,20 +117,11 @@
     <ClInclude Include="src\cloudplugin.h">
       <Filter>CloudPlugins</Filter>
     </ClInclude>
-    <ClInclude Include="src\cloudcontainer.h">
-      <Filter>CloudPlugins\CloudContainer</Filter>
-    </ClInclude>
-    <ClInclude Include="src\kdtree.h">
-      <Filter>CloudPlugins\CloudContainer</Filter>
-    </ClInclude>
     <ClInclude Include="src\defines.h">
       <Filter>CloudPlugins</Filter>
     </ClInclude>
     <ClInclude Include="src\qnspinbox.h">
       <Filter>Gui\QTFails</Filter>
-    </ClInclude>
-    <ClInclude Include="src\datagenerator.h">
-      <Filter>CloudPlugins\DataGenerator</Filter>
     </ClInclude>
     <ClInclude Include="src\taskscheduler.h">
       <Filter>CloudPlugins</Filter>
@@ -123,30 +129,69 @@
     <ClInclude Include="src\types.h">
       <Filter>CloudPlugins</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="Resources\images\side1.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="Resources\images\side2.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="Resources\images\side3.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="Resources\images\side4.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="Resources\images\side5.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="Resources\images\side6.png">
-      <Filter>Resource Files</Filter>
-    </Image>
+    <ClInclude Include="GeneratedFiles\ui_new.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\surfacegenerator.h">
+      <Filter>CloudPlugins\SurfaceGenerator</Filter>
+    </ClInclude>
+    <ClInclude Include="src\cloudcontainer.h">
+      <Filter>CloudPlugins\CloudContainer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\kdtree.h">
+      <Filter>CloudPlugins\CloudContainer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\c_io.h">
+      <Filter>CloudPlugins\Cloud_InputOutput</Filter>
+    </ClInclude>
+    <ClInclude Include="src\filters.h">
+      <Filter>CloudPlugins\SurfaceGenerator</Filter>
+    </ClInclude>
+    <ClInclude Include="src\normalestimators.h">
+      <Filter>CloudPlugins\SurfaceGenerator</Filter>
+    </ClInclude>
+    <ClInclude Include="cgal_types.h">
+      <Filter>CloudPlugins</Filter>
+    </ClInclude>
+    <ClInclude Include="GeneratedFiles\ui_new_outl_filter.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GeneratedFiles\ui_new_simpl_filter.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GeneratedFiles\ui_new_smoth_filter.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GeneratedFiles\ui_new_surf_rec.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GeneratedFiles\ui_filter_widget.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resources\sfc.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="images\side1.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="images\side2.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="images\side3.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="images\side4.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="images\side5.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="images\side6.png">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

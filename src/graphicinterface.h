@@ -5,6 +5,12 @@
 #include "qnspinbox.h"
 
 #include "ui_sfc.h"
+#include "ui_new.h"
+#include "ui_new_outl_filter.h"
+#include "ui_new_simpl_filter.h"
+#include "ui_new_smoth_filter.h"
+#include "ui_new_surf_rec.h"
+#include "ui_filter_widget.h"
 
 class GLWidget;
 class GLNSpinBox;
@@ -17,45 +23,73 @@ public:
 	GraphicInterface(/*QWidget *parent = Q_NULLPTR*/);
 
 private slots:
-void rotateOneStep();
-void attemptUpdate();
-void goLeftInTree();
-void goRightInTree();
-void goParentInTree();
-void setCore(const int&);
-void setThread(const int&);
-void setDisplayType(const int &text);
-void stop();
+void newConnection();
 void exportSurface();
 void info();
 void open();
 void save();
 void saveas();
-void newConnection();
-void compChanged();
+
+void acceptNew();
+void acceptNewOutlierFilter();
+void acceptNewSimplFilter();
+void acceptNewSmothFilter();
+void acceptNewSurf();
+void deleteFilter();
+
+void cancelDialog();
+void openFileDial();
+
+void sourceChanged(const int &);
+void setMaxPoi(const int &);
+void setCore(const int&);
+void swapStartFlag();
+void noMoreData();
+
+//void showNearest();
+//void showKNearest();
 
 protected:
 	void setupSignals();
+	void setupFilterActions();
+
+	void openOutlierFilterPropertyWindow();
+	void openSimplifierPropertyWindow();
+	void openSmootherFilterPropertyWindow();
+	void openSurfacePropertyWindow();
 
 	void setCalculationBar();
 	void refreshCalculationBar();
 private:
 	Ui::sfcGUI ui;
+	Ui::SfcNew ui_new;
+	Ui::sfcOutF ui_out_filter;
+	Ui::sfcSimpF ui_simpl_filter;
+	Ui::sfcSmoF ui_smo_filter;
+	Ui::sfcSurf ui_surf;
+
+	QDialog* dialog;
+
+	std::vector<Ui::sfcWidgetF*> ui_filters;
+	QWidget* widget;
+	unsigned int active_filter_item;
+
+	unsigned int hovered_filter_item;
 
 	QTimer *timer;
 
-	QLabel *fps;
+	QLabel *c_load;
 	QLabel *join;
 	QLabel *sort;
 	QLabel *all;
 	QLabel *poi;
-	QLabel *poi2;
-	QLCDNumber *_fps;
+	QLabel *s_cal;
+	QLCDNumber *_c_load;
 	QLCDNumber *_join;
 	QLCDNumber *_sort;
 	QLCDNumber *_all;
 	QLCDNumber *_poi;
-	QLCDNumber *_poi2;
+	QLCDNumber * _s_cal;
 };
 
 #endif

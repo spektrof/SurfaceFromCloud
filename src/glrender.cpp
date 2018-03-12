@@ -3,17 +3,23 @@
 #include <QOpenGLTexture>
 #include <QMouseEvent>
 
+#ifdef ENABLE_DEBUG
+	#include <QDebug>
+#endif
+
 GLRender::GLRender(QWidget *parent)
 	: QOpenGLWidget(parent),
 	clearColor(Qt::black),
 	xRot(0), yRot(0), zRot(0),
 	counter(0),
 	zoom(1.0f),
+	drawing_size(0),
+	sfg(SurfaceGenerator()),
 	program(0)
 {
 	memset(textures, 0, sizeof(textures));
+	elementbuffer = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
 
-	cloud = new kdTree(4, 20000, Section(-0.1f, 0.1f));
 }
 
 GLRender::~GLRender()
@@ -21,7 +27,6 @@ GLRender::~GLRender()
 	makeCurrent();
 	vbo.destroy();
 	cloud_vbo.destroy();
-	delete cloud;
 
 	for (int i = 0; i < 6; ++i)
 		delete textures[i];
@@ -60,7 +65,7 @@ void GLRender::initializeGL()
 {
 	initializeOpenGLFunctions();
 
-	makeObject();		//TODO: REMOVE THESE later
+	//makeObject();		//TODO: REMOVE THESE later
 	makeObjectFromCloud();
 
 	glEnable(GL_DEPTH_TEST);
@@ -88,7 +93,7 @@ void GLRender::initializeGL()
 		"varying mediump vec4 texc;\n"
 		"void main(void)\n"
 		"{\n"
-		"    gl_FragColor = texture2D(texture, texc.st);\n"
+		"    gl_FragColor = vec4(1,0,0,0.5) /*texture2D(texture, texc.st)*/;\n"
 		"}\n";
 	fshader->compileSourceCode(fsrc);
 
@@ -105,22 +110,53 @@ void GLRender::initializeGL()
 
 void GLRender::attemptUpdate()
 {
-	if (cloud->process())
+	switch(sfg.process())
 	{
-		makeObjectFromCloud();
-		emit step_finished();
-		update();
+		case PROCESS_DONE:
+		{
+			makeObjectFromCloud();
+			emit step_finished();					//calculation bar refresh
+			
+			update();
+
+			break;
+		}
+		case NO_INPUT_DATA:
+		{
+			emit data_ended();		//TODO: can be other error
+			break;
+		}
+		default:
+			break;
 	}
 }
 
 void GLRender::paintGL()
 {
+	switch (sfg.getDrawObject())
+	{
+		case POINTSS:
+			cloud_vbo.bind();
+			break;
+		case BOX:
+		{
+			elementbuffer.bind();
+			break;
+		}
+		case SURFACE:
+		{
+			break;
+		}
+		default:
+			break;
+	}
+
 	counter++;		//TODO: this will be the fps claculator
 	glClearColor(clearColor.redF(), clearColor.greenF(), clearColor.blueF(), clearColor.alphaF());
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	QMatrix4x4 m;
-	m.ortho(-0.5f / zoom, +0.5f / zoom, +0.5f / zoom, -0.5f / zoom, -1.0f, 85.0f);
+	m.ortho(-2.5f / zoom, +2.5f / zoom, +2.5f / zoom, -2.5f / zoom, -10.0f, 85.0f);
 
 	m.translate(0.0f, 0.0f, -50.0f );
 	m.rotate(xRot / 16.0f, 1.0f, 0.0f, 0.0f);
@@ -209,43 +245,162 @@ void GLRender::makeObject()
 
 void GLRender::makeObjectFromCloud()
 {
-	std::vector<Coord> cloudData = cloud->getDrawingData();
+	GLPaintFormat paintData = sfg.getPaintData();
+	drawing_size = 0;
 
-	QVector<GLfloat> vertData;
-	for(auto it : cloudData)
+	if (paintData.p.empty() && paintData.box_points.empty()) { return; }
+
+	switch (sfg.getDrawObject())
 	{
-		// vertex position
-		vertData.append(it.x);
-		vertData.append(it.y);
-		vertData.append(it.z);
-		// texture coordinate
-		vertData.append(0);
-		vertData.append(1);
-		//TODO
+		case POINTSS:
+		{
+			if (cloud_vbo.isCreated()) cloud_vbo.release();
+
+			QVector<GLfloat> vertData;
+			for (auto it : paintData.p)
+			{
+				// vertex position
+				vertData.append(it.x());
+				vertData.append(it.y());
+				vertData.append(it.z());
+				// texture coordinate
+				vertData.append(0);
+				vertData.append(1);
+				//TODO
+			}
+
+			drawing_size = paintData.p.size();
+
+			cloud_vbo.create();
+			cloud_vbo.bind();
+			cloud_vbo.allocate(vertData.constData(), vertData.count() * sizeof(GLfloat));
+			return;
+		}
+		case BOX:
+		{
+			if (cloud_vbo.isCreated()) cloud_vbo.release();
+			if (elementbuffer.isCreated()) elementbuffer.release();
+
+			QVector<GLfloat> boxData;
+			for (auto it : paintData.box_points)
+			{
+				// vertex position
+				boxData.append(it.x());
+				boxData.append(it.y());
+				boxData.append(it.z());
+				// texture coordinate
+				boxData.append(0);
+				boxData.append(1);
+				//TODO
+			}
+			cloud_vbo.create();
+			cloud_vbo.bind();
+			cloud_vbo.allocate(boxData.constData(), boxData.count() * sizeof(GLfloat));
+			//-------------
+			drawing_size = paintData.ix.size();
+
+			elementbuffer.create();
+			elementbuffer.bind();
+			elementbuffer.allocate(&paintData.ix[0], paintData.ix.size() * sizeof(GLuint));
+			return;
+		}
+		case SURFACE:
+		{
+			if (cloud_vbo.isCreated()) cloud_vbo.release();
+			if (elementbuffer.isCreated()) elementbuffer.release();
+
+			QVector<GLfloat> boxData;
+			for (auto it : paintData.box_points)
+			{
+				// vertex position
+				boxData.append(it.x());
+				boxData.append(it.y());
+				boxData.append(it.z());
+				// texture coordinate
+				boxData.append(0);
+				boxData.append(1);
+				//TODO
+			}
+			cloud_vbo.create();
+			cloud_vbo.bind();
+			cloud_vbo.allocate(boxData.constData(), boxData.count() * sizeof(GLfloat));
+			//-------------
+			drawing_size = paintData.ix.size();
+
+			elementbuffer.create();
+			elementbuffer.bind();
+			elementbuffer.allocate(&paintData.ix[0], paintData.ix.size() * sizeof(GLuint));
+
+#ifdef ENABLE_DEBUG
+			qDebug() << *std::max_element(paintData.ix.begin(), paintData.ix.end()) << "\n" << boxData.size();
+#endif
+			return;
+		}
+		default:
+			return;
 	}
 
-	if (cloud_vbo.isCreated()) cloud_vbo.release();
-	cloud_vbo.create();
-	cloud_vbo.bind();
-	cloud_vbo.allocate(vertData.constData(), vertData.count() * sizeof(GLfloat));
+	
 }
 
 void GLRender::renderObject()
 {
-	switch (cloud->getDrawType())
+	//TODO FPS COUNTER WITH INDEXING
+	//http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-9-vbo-indexing/
+
+	switch (sfg.getDrawObject())
 	{
-	case CloudContainer::DRAWPOSSIBILITIES::POINTS:
-		glDrawArrays(GL_POINTS, 0, cloud->getDrawingData().size());
+	case POINTSS:
+		glDisable(GL_BLEND);
+		glDepthMask(GL_TRUE);
+		cloud_vbo.bind();
+		glDrawArrays(GL_POINTS, 0, drawing_size);
 		return;
-	case CloudContainer::DRAWPOSSIBILITIES::BOX:
+	case BOX:
 	{
-		//TODO: replace with triangles ...
-		size_t s = cloud->getDrawingData().size();
-		for (int i = 0; i < s / 4; ++i)
-		{
-			//textures[i]->bind();
-			glDrawArrays(GL_TRIANGLE_FAN, i * 4, 4);
-		}
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glEnable(GL_BLEND);
+		glDepthMask(GL_FALSE);
+		cloud_vbo.bind();
+		elementbuffer.bind();
+
+		glDrawElements(
+			GL_TRIANGLES,      // mode
+			drawing_size,    // count
+			GL_UNSIGNED_INT,   // type
+			(void*)0           // element array buffer offset
+		);
+		return;
+	}
+	case SURFACE:		//crash!!
+	{
+		if (drawing_size == 0) return;
+
+#ifdef ENABLE_DEBUG
+		qDebug() << "Surface draw\n";
+#endif
+
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glEnable(GL_BLEND);
+		glDepthMask(GL_FALSE);
+		//cloud_vbo.bind();
+		elementbuffer.bind();
+
+#ifdef ENABLE_DEBUG
+		qDebug() << "\tBinded\n";
+#endif
+
+		glDrawElements(
+			GL_TRIANGLES,      // mode
+			drawing_size,    // count
+			GL_UNSIGNED_INT,   // type
+			(void*)0           // element array buffer offset
+		);
+
+#ifdef ENABLE_DEBUG
+		qDebug() << "\tDrawed\n";
+#endif
+
 		return;
 	}
 	default:
@@ -253,23 +408,21 @@ void GLRender::renderObject()
 	}
 }
 
-void GLRender::getCloudCalculationTime(float& fps, float& join_time, float& sort_time, float& all_time)
+void GLRender::getCloudCalculationTime(float& c_load_time, float& s_cal_time, float& all_time, float& join_time, float& sort_time)
 {
-	fps = counter;
-	cloud->getTimes(join_time, sort_time, all_time);
+	sfg.getTimes(c_load_time, s_cal_time, all_time, join_time, sort_time);
 }
 
-void GLRender::getCloudPoints(int& data, int& box)
+void GLRender::getCloudPoints(int& data)
 {
-	data = cloud->getDrawingData().size();
-	box = cloud->getPointNumbFromBox();
+	data = drawing_size;
 }
 
 void GLRender::attemptChangeDrawType(const unsigned int& ind)
 { 
-	if (cloud->getDrawType() - ind) 
+	if (sfg.getDrawObject() - ind)
 	{
-		cloud->changeDrawType(ind);
+		sfg.setDrawObject(ind);
 		makeObjectFromCloud(); 
 		update(); 
 	} 
@@ -277,10 +430,10 @@ void GLRender::attemptChangeDrawType(const unsigned int& ind)
 
 void GLRender::attemptChangeThreadCapacity(const unsigned int& cloud_t, const unsigned int& surface_t)
 {
-	if (cloud->getThreadCapacity() - cloud_t)
+	if (sfg.getThreadCapacity() - cloud_t)
 	{
 		//TODO: wait until it finish a session
-		cloud->changeThreadCapacity(cloud_t);
+		sfg.changeThreadCapacity(cloud_t);
 	}
 
 	/*if (surf->getThreadCapacity() - surface_t)
@@ -296,17 +449,17 @@ void GLRender::goNode(const int& direction)
 	{
 	case 0:
 	{
-		cloud->goParentNode();
+		sfg.goParentNode();
 		break;
 	}
 	case 1:
 	{
-		cloud->goLeftNode();
+		sfg.goLeftNode();
 		break;
 	}
 	case 2:
 	{
-		cloud->goRightNode();
+		sfg.goRightNode();
 		break;
 	}
 	default:
@@ -317,7 +470,21 @@ void GLRender::goNode(const int& direction)
 	update();
 }
 
-void GLRender::changeComputation()
+void GLRender::swapStartFlag()
 {
-	cloud->changeComputation();
+	sfg.swapStartFlag();
+}
+
+void GLRender::showNearest()
+{
+	/*cloud->nearest();
+	makeObjectFromCloud();
+	update();*/
+}
+
+void GLRender::showKNearest()
+{
+	/*cloud->knearest();
+	makeObjectFromCloud();
+	update();*/
 }

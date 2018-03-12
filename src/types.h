@@ -1,8 +1,32 @@
 #pragma once
 
 #include <iostream>
-#include <boost/sort/spreadsort/spreadsort.hpp>		//TODO just for rightshift - so probably wont need this
 
+enum ProcessReturns
+{
+	CLOUD_LOAD_SUCCESS,
+	PROCESS_DONE,
+	NO_INPUT_DATA,
+	PROCESS_STOPPED,
+	EMPTY_POINTS_SET,
+	NOT_ENABLED_COMPONENT,
+	UNDEFINED_ERROR
+};
+
+enum DrawPossibilites
+{
+	POINTSS,
+	BOX,
+	SURFACE,
+	UNDEFINED
+};
+
+static float sumOfsquare(const float& x, const float& y, const float& z)
+{
+	return x * x + y * y + z * z;
+}
+
+/*
 // Coords & Textures later-------------- -
 struct Coord
 {
@@ -39,6 +63,11 @@ struct Coord
 	}
 };
 
+inline Coord& operator - (const Coord& lhs, const Coord& rhs)
+{
+	return Coord(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z);
+}
+
 inline bool operator < (const Coord& c, const Coord& _c)
 {
 	return c.x < _c.x || (c.x == _c.x &&  c.y < _c.y) || (c.x == _c.x && c.y == _c.y && c.z < _c.z);
@@ -58,6 +87,7 @@ inline bool operator > (const Coord& c, const Coord& _c)
 {
 	return c.x > _c.x || (c.x == _c.x &&  c.y > _c.y) || (c.x == _c.x && c.y == _c.y && c.z > _c.z);
 }
+*/
 
 //---------------------------------------
 //Boxes for nodes - just for testing kdTree
@@ -80,25 +110,26 @@ struct Box
 	Box(const Section& _x, const Section& _y, const Section& _z) : x(_x), y(_y), z(_z) {}
 	Box(const float& xmi, const float& xma, const float& ymi, const float& yma, const float& zmi, const float& zma) : x(Section(xmi, xma)), y(Section(ymi, yma)), z(Section(zmi, zma)) {}
 
-	bool isInside(const Coord& c) { return x.isBetween(c.x) && y.isBetween(c.y) && z.isBetween(c.z); }
+	//bool isInside(const Point& c) { return x.isBetween(c.x()) && y.isBetween(c.y()) && z.isBetween(c.z()); }
 
-	float getXMin() { return x.min; }
-	float getXMax() { return x.max; }
-	float getYMin() { return y.min; }
-	float getYMax() { return y.max; }
-	float getZMin() { return z.min; }
-	float getZMax() { return z.max; }
+	float getXMin() const { return x.min; }
+	void setXMin(const float& v) {		x.min = v; }
+	float getXMax() const { return x.max; }
+	void setXMax(const float& v) {		x.max = v; ; }
+	float getYMin() const { return y.min; }
+	void setYMin(const float& v) {		y.min = v; ; }
+	float getYMax() const { return y.max; }
+	void setYMax(const float& v) {		y.max = v; ; }
+	float getZMin() const { return z.min; }
+	void setZMin(const float& v) {		z.min = v; ; }
+	float getZMax() const { return z.max; }
+	void setZMax(const float& v) {		z.max = v; ; }
 
-	float getXLength() { return x.max - x.min; }
-	float getYLength() { return y.max - y.min; }
-	float getZLength() { return z.max - z.min; }
+	float getXLength() const { return x.max - x.min; }
+	float getYLength() const { return y.max - y.min; }
+	float getZLength() const { return z.max - z.min; }
+
+	float getVolume() const { return getXLength() * getYLength() * getZLength(); }
 };
 
 //-----------------------------------------------
-
-//rossz de alapból rossz speciális compare funcra
-struct rightshiftCoord {
-	int operator()(const Coord &c, const unsigned offset) const {
-		return boost::sort::spreadsort::float_mem_cast<float, int>(c.x) >> offset;
-	}
-};

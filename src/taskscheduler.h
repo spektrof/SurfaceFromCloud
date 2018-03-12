@@ -14,6 +14,7 @@ template<class K, typename T>
 class TaskSchedular
 {
 	typedef void (K::*builder)(T*,bool,const int&);
+	typedef void (K::*nearest)(T*,bool,const int&);
 
 public:
 	TaskSchedular()
@@ -41,6 +42,17 @@ public:
 			while (!tasks.pop(act)) {}
 
 			thread_ptrs.push_back(thread_pool.create_thread(boost::bind(build, src, act, false, 0)));	//cref actal unable to read volt
+		}
+	}
+
+	void addSubscribeShit(K* src, nearest _n)
+	{
+		if (!isEmptyTask() && thread_pool.size() < maximumThread)
+		{
+			T* act;
+			while (!tasks.pop(act)) {}
+
+			thread_ptrs.push_back(thread_pool.create_thread(boost::bind(_n, src, act, false, 0)));	//cref actal unable to read volt
 		}
 	}
 

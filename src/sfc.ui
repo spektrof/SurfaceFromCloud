@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>813</width>
-    <height>642</height>
+    <height>611</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -72,7 +72,7 @@ QPushButton:hover{
 color:#ccc;
 background-color: qlineargradient(spread:pad, x:1:0.517, y1:0, x2:0.517, y2:1, stop:0 rgba(45,45,45,255), stop:0.505682 rgba(45,45,45,255), stop:1 rgba(29,29,29,255));
 border-color:#29d1d9;
-border-widht:2px;
+border-width:2px;
 }
 
 QPushButton:pressed{
@@ -130,14 +130,20 @@ font: 8pt &quot;Times New Roman&quot;;
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>20</y>
+       <y>0</y>
        <width>231</width>
-       <height>581</height>
+       <height>591</height>
       </rect>
      </property>
      <layout class="QVBoxLayout" name="rightSide">
       <item>
        <widget class="QGroupBox" name="details">
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>90</height>
+         </size>
+        </property>
         <property name="title">
          <string>Computations capacity</string>
         </property>
@@ -185,49 +191,42 @@ font: 8pt &quot;Times New Roman&quot;;
           <number>1</number>
          </property>
         </widget>
-        <widget class="QLabel" name="label_2">
-         <property name="geometry">
-          <rect>
-           <x>30</x>
-           <y>40</y>
-           <width>47</width>
-           <height>13</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>Threads</string>
-         </property>
-        </widget>
-        <widget class="QSpinBox" name="thread">
-         <property name="geometry">
-          <rect>
-           <x>150</x>
-           <y>40</y>
-           <width>42</width>
-           <height>16</height>
-          </rect>
-         </property>
-         <property name="keyboardTracking">
-          <bool>false</bool>
-         </property>
-        </widget>
         <widget class="QPushButton" name="compButton">
          <property name="geometry">
           <rect>
-           <x>80</x>
-           <y>70</y>
+           <x>20</x>
+           <y>50</y>
            <width>75</width>
            <height>23</height>
           </rect>
          </property>
          <property name="text">
-          <string>Stop</string>
+          <string>Start</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="surf">
+         <property name="geometry">
+          <rect>
+           <x>130</x>
+           <y>50</y>
+           <width>75</width>
+           <height>23</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Surface</string>
          </property>
         </widget>
        </widget>
       </item>
       <item>
        <widget class="QGroupBox" name="draw">
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>75</height>
+         </size>
+        </property>
         <property name="title">
          <string>Display</string>
         </property>
@@ -248,7 +247,7 @@ font: 8pt &quot;Times New Roman&quot;;
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>80</y>
+           <y>40</y>
            <width>211</width>
            <height>25</height>
           </rect>
@@ -307,53 +306,124 @@ font: 8pt &quot;Times New Roman&quot;;
           </property>
          </item>
         </widget>
-        <widget class="QLabel" name="label_4">
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="filterBox">
+        <property name="title">
+         <string>Filters</string>
+        </property>
+        <widget class="QScrollArea" name="scrollArea">
+         <property name="geometry">
+          <rect>
+           <x>-10</x>
+           <y>12</y>
+           <width>241</width>
+           <height>241</height>
+          </rect>
+         </property>
+         <property name="widgetResizable">
+          <bool>true</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+         </property>
+         <widget class="QWidget" name="scrollAreaWidgetContents_2">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>222</width>
+            <height>248</height>
+           </rect>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>0</height>
+           </size>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_3">
+           <item>
+            <widget class="QToolBox" name="filters">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>50</width>
+               <height>230</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>250</height>
+              </size>
+             </property>
+             <property name="currentIndex">
+              <number>0</number>
+             </property>
+             <property name="tabSpacing">
+              <number>5</number>
+             </property>
+             <widget class="QWidget" name="page">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>204</width>
+                <height>204</height>
+               </rect>
+              </property>
+              <attribute name="label">
+               <string>Filter1</string>
+              </attribute>
+             </widget>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="surfaceBox">
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>150</height>
+         </size>
+        </property>
+        <property name="title">
+         <string>Surface reconstructor</string>
+        </property>
+        <widget class="QToolBox" name="surfacerec">
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>60</y>
-           <width>91</width>
-           <height>16</height>
+           <y>20</y>
+           <width>211</width>
+           <height>111</height>
           </rect>
          </property>
-         <property name="text">
-          <string>Moving direction</string>
+         <property name="currentIndex">
+          <number>0</number>
          </property>
+         <widget class="QWidget" name="page_4">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>211</width>
+            <height>84</height>
+           </rect>
+          </property>
+          <attribute name="label">
+           <string>Page 2</string>
+          </attribute>
+         </widget>
         </widget>
-       </widget>
-      </item>
-      <item>
-       <widget class="QGroupBox" name="algs">
-        <property name="title">
-         <string>Etc</string>
-        </property>
-        <widget class="QLabel" name="label_5">
-         <property name="geometry">
-          <rect>
-           <x>20</x>
-           <y>30</y>
-           <width>101</width>
-           <height>16</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>Right now KDTree</string>
-         </property>
-        </widget>
-       </widget>
-      </item>
-      <item>
-       <widget class="QGroupBox" name="groupBox_3">
-        <property name="title">
-         <string>GroupBox</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QGroupBox" name="sadsadsa">
-        <property name="title">
-         <string>j</string>
-        </property>
        </widget>
       </item>
      </layout>
@@ -368,6 +438,70 @@ font: 8pt &quot;Times New Roman&quot;;
       <height>21</height>
      </rect>
     </property>
+   </widget>
+   <widget class="QGroupBox" name="sadsadsa">
+    <property name="geometry">
+     <rect>
+      <x>310</x>
+      <y>10</y>
+      <width>229</width>
+      <height>60</height>
+     </rect>
+    </property>
+    <property name="maximumSize">
+     <size>
+      <width>16777215</width>
+      <height>60</height>
+     </size>
+    </property>
+    <property name="title">
+     <string>j</string>
+    </property>
+    <widget class="QSlider" name="max_slider">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>30</y>
+       <width>160</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="maximum">
+      <number>16</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="max_poi">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>10</y>
+       <width>71</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="contextMenuPolicy">
+      <enum>Qt::PreventContextMenu</enum>
+     </property>
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_6">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>10</y>
+       <width>81</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Max Poi in 1 box</string>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
@@ -398,7 +532,36 @@ font: 8pt &quot;Times New Roman&quot;;
     </property>
     <addaction name="actionInfo"/>
    </widget>
+   <widget class="QMenu" name="menuFilter">
+    <property name="title">
+     <string>Filter</string>
+    </property>
+    <addaction name="actionOutlier_removals"/>
+    <addaction name="separator"/>
+    <addaction name="actionCGAL_based_outl"/>
+    <addaction name="actionPlane_base_out"/>
+    <addaction name="separator"/>
+    <addaction name="actionSimplifiers"/>
+    <addaction name="separator"/>
+    <addaction name="actionGrid_mine"/>
+    <addaction name="actionCGAL_based_Grid"/>
+    <addaction name="actionCGAL_based_Hieararchy"/>
+    <addaction name="separator"/>
+    <addaction name="actionSmoothers"/>
+    <addaction name="separator"/>
+    <addaction name="actionCGAL_based_Jet_smoother"/>
+   </widget>
+   <widget class="QMenu" name="menuSurface">
+    <property name="title">
+     <string>Surface</string>
+    </property>
+    <addaction name="actionCGAL_based_Poisson"/>
+    <addaction name="actionVoronoi_based"/>
+    <addaction name="actionPartial_diff"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuFilter"/>
+   <addaction name="menuSurface"/>
    <addaction name="menuHelp"/>
   </widget>
   <action name="actionNew">
@@ -436,6 +599,81 @@ font: 8pt &quot;Times New Roman&quot;;
     <string>Exit</string>
    </property>
   </action>
+  <action name="actionOutlier_removals">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Outlier removals</string>
+   </property>
+   <property name="visible">
+    <bool>true</bool>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::NoRole</enum>
+   </property>
+  </action>
+  <action name="actionCGAL_based_outl">
+   <property name="text">
+    <string>CGAL based</string>
+   </property>
+  </action>
+  <action name="actionPlane_base_out">
+   <property name="text">
+    <string>Plane based</string>
+   </property>
+  </action>
+  <action name="actionSimplifiers">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Simplifiers</string>
+   </property>
+  </action>
+  <action name="actionGrid_mine">
+   <property name="text">
+    <string>Grid mine</string>
+   </property>
+  </action>
+  <action name="actionCGAL_based_Grid">
+   <property name="text">
+    <string>CGAL based Grid</string>
+   </property>
+  </action>
+  <action name="actionCGAL_based_Hieararchy">
+   <property name="text">
+    <string>CGAL based Hieararchy</string>
+   </property>
+  </action>
+  <action name="actionSmoothers">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Smoothers</string>
+   </property>
+  </action>
+  <action name="actionCGAL_based_Jet_smoother">
+   <property name="text">
+    <string>CGAL based Jet smoother</string>
+   </property>
+  </action>
+  <action name="actionCGAL_based_Poisson">
+   <property name="text">
+    <string>CGAL based Poisson</string>
+   </property>
+  </action>
+  <action name="actionVoronoi_based">
+   <property name="text">
+    <string>Voronoi based</string>
+   </property>
+  </action>
+  <action name="actionPartial_diff">
+   <property name="text">
+    <string>Partial diff.</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -450,7 +688,7 @@ font: 8pt &quot;Times New Roman&quot;;
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../sfc.qrc"/>
+  <include location="../Resources/sfc.qrc"/>
  </resources>
  <connections/>
 </ui>

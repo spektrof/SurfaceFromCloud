@@ -61,7 +61,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PreprocessorDefinitions>UNICODE;_UNICODE;WIN32;WIN64;QT_DLL;QT_NO_DEBUG;NDEBUG;QT_CORE_LIB;QT_GUI_LIB;QT_OPENGL_LIB;QT_WIDGETS_LIB;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\GeneratedFiles;.\src;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtOpenGL;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtGui;D:\libraries\boost_1_66_0\;D:\libraries\CGAL-4.10.2\include;D:\libraries\CGAL-4.10.2\build\include;D:\libraries\CGAL-4.10.2\auxiliary\gmp\include;D:\libraries\Eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\GeneratedFiles;.\src;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtOpenGL;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtGui;D:\libraries\boost_1_66_0\;D:\libraries\CGAL-4.10.2\include;D:\libraries\CGAL-4.10.2\build\include;D:\libraries\CGAL-4.10.2\auxiliary\gmp\include;D:\libraries\Eigen;D:\libraries\TBB\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat />
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
@@ -73,9 +73,9 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <OutputFile>$(OutDir)\$(ProjectName).exe</OutputFile>
-      <AdditionalLibraryDirectories>$(QTDIR)\lib;D:\libraries\boost_1_66_0\stage\lib;D:\libraries\CGAL-4.10.2\build\lib\Release;D:\libraries\CGAL-4.10.2\auxiliary\gmp\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(QTDIR)\lib;D:\libraries\boost_1_66_0\stage\lib;D:\libraries\CGAL-4.10.2\build\lib\Release;D:\libraries\CGAL-4.10.2\auxiliary\gmp\lib;D:\libraries\TBB\lib\intel64\vc14;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalDependencies>qtmain.lib;Qt5Core.lib;Qt5OpenGL.lib;Qt5Gui.lib;opengl32.lib;glu32.lib;Qt5Widgets.lib;libmpfr-4.lib;libgmp-10.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>qtmain.lib;Qt5Core.lib;Qt5OpenGL.lib;Qt5Gui.lib;opengl32.lib;glu32.lib;Qt5Widgets.lib;libmpfr-4.lib;libgmp-10.lib;tbb.lib;tbbmalloc.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -97,11 +97,14 @@
     <ClCompile Include="GeneratedFiles\Release\moc_graphicinterface.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="src\c_io.cpp" />
+    <ClCompile Include="src\camera.cpp" />
+    <ClCompile Include="src\comments.cpp" />
     <ClCompile Include="src\glrender.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\graphicinterface.cpp" />
+    <ClCompile Include="src\power_diagram.cpp" />
     <ClCompile Include="src\surfacegenerator.cpp" />
+    <ClCompile Include="src\voronoi_dagram.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\graphicinterface.h">
@@ -112,7 +115,7 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing window.h...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -D_UNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE  "-I.\GeneratedFiles" "-I.\src" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtOpenGL" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-ID:\libraries\boost_1_66_0" "-ID:\libraries\CGAL-4.10.2\include" "-ID:\libraries\CGAL-4.10.2\build\include" "-ID:\libraries\CGAL-4.10.2\auxiliary\gmp\include" "-ID:\libraries\Eigen"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -D_UNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE  "-I.\GeneratedFiles" "-I.\src" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtOpenGL" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-ID:\libraries\boost_1_66_0" "-ID:\libraries\CGAL-4.10.2\include" "-ID:\libraries\CGAL-4.10.2\build\include" "-ID:\libraries\CGAL-4.10.2\auxiliary\gmp\include" "-ID:\libraries\Eigen" "-ID:\libraries\TBB\include"</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -128,7 +131,6 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cgal_types.h" />
     <ClInclude Include="GeneratedFiles\ui_filter_widget.h" />
     <ClInclude Include="GeneratedFiles\ui_new.h" />
     <ClInclude Include="GeneratedFiles\ui_new_outl_filter.h" />
@@ -136,10 +138,17 @@
     <ClInclude Include="GeneratedFiles\ui_new_smoth_filter.h" />
     <ClInclude Include="GeneratedFiles\ui_new_surf_rec.h" />
     <ClInclude Include="GeneratedFiles\ui_sfc.h" />
+    <ClInclude Include="src\camera.h" />
+    <ClInclude Include="src\cgal_types.h" />
     <ClInclude Include="src\cloudcontainer.h" />
     <ClInclude Include="src\cloudplugin.h" />
     <ClInclude Include="src\c_io.h" />
     <ClInclude Include="src\defines.h" />
+    <ClInclude Include="src\diagram_types.h" />
+    <ClInclude Include="src\poisson_surface_rec.h" />
+    <ClInclude Include="src\power_diagram.h" />
+    <ClInclude Include="src\priority_queue.h" />
+    <ClInclude Include="src\voronoi_diagram.h" />
     <CustomBuild Include="src\glrender.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing %(Identity)...</Message>
@@ -148,7 +157,7 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing %(Identity)...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -D_UNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE  "-I.\GeneratedFiles" "-I.\src" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtOpenGL" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-ID:\libraries\boost_1_66_0" "-ID:\libraries\CGAL-4.10.2\include" "-ID:\libraries\CGAL-4.10.2\build\include" "-ID:\libraries\CGAL-4.10.2\auxiliary\gmp\include" "-ID:\libraries\Eigen"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -D_UNICODE -DWIN32 -DWIN64 -DQT_DLL -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE  "-I.\GeneratedFiles" "-I.\src" "-I." "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtOpenGL" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-ID:\libraries\boost_1_66_0" "-ID:\libraries\CGAL-4.10.2\include" "-ID:\libraries\CGAL-4.10.2\build\include" "-ID:\libraries\CGAL-4.10.2\auxiliary\gmp\include" "-ID:\libraries\Eigen" "-ID:\libraries\TBB\include"</Command>
     </CustomBuild>
     <ClInclude Include="src\filters.h" />
     <ClInclude Include="src\kdtree.h" />
@@ -252,6 +261,10 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\GeneratedFiles\ui_%(Filename).h;%(Outputs)</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\uic.exe" -o ".\GeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\sphere.frag" />
+    <None Include="src\sphere.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -33,7 +33,7 @@ public:
 	
 template< typename T>
 Filter<T>::~Filter() {
-	qDebug() << "DELETED FILTER\n";
+	qDebug() << "\nDELETED FILTER\n";
 }	//provided body for pure virtual destr
 
 template< typename T>
@@ -52,7 +52,7 @@ public:
 };
 template< typename T>
 Simplifier<T>::~Simplifier() {
-	qDebug() << "DELETED Simplifier\n";
+	qDebug() << "\nDELETED Simplifier\n";
 }	//provided body for pure virtual destr
 
 template< typename T>
@@ -81,7 +81,7 @@ class OutlierComponentRemoval : public Simplifier<T>
 public:
 	OutlierComponentRemoval(const Vector& _p = Vector(0, 0, 0), const Vector& _n = Vector(1, 0, 0)) : p(_p), n(_n) {}
 	~OutlierComponentRemoval() {
-		qDebug() << "DELETED OUTLIER\n";
+		qDebug() << "DELETED OUTLIER";
 	}
 
 	void filter_process(std::vector<T>& points) override
@@ -94,7 +94,7 @@ public:
 			float s_d = points[it].x()*n.x() + points[it].y()*n.y() + points[it].z()*n.z() - md;
 			if (s_d < 0) del_pos.push_back(it);
 		}
-		//qDebug() << md << " , " << p.x() << "-" << p.y() << "-" << p.z() << " " << n.x() << "-" << n.y() << "-" << n.z() << " " << del_pos.size() << "\n";
+		//qDebug() << md << " , " << p.x() << "-" << p.y() << "-" << p.z() << " " << n.x() << "-" << n.y() << "-" << n.z() << " " << del_pos.size();
 		if (del_pos.size() == 0) return;
 
 		for (auto it = del_pos.end() - 1; it >= del_pos.begin(); --it)
@@ -105,7 +105,7 @@ public:
 	}
 
 	void SetFirstProperty(const Vector& first) override {
-		qDebug() << first.x() << " " << first.y() << " " <<  first.z() << "\n";
+		qDebug() << "\tNew Property: " << first.x() << " " << first.y() << " " <<  first.z();
 		p = first; 
 	}
 	void SetSecondProperty(const Vector& second)override { n = second; }
@@ -125,7 +125,7 @@ public:
 
 	void filter_process(std::vector<T>& points) override
 	{
-		qDebug() << "Outlier removal in progress with " << nb_neighbors << " " << outlier_limit << "\n";
+		qDebug() << "Outlier removal in progress with " << nb_neighbors << " " << outlier_limit;
 		//FIRST: I dont know the ratio
 		std::vector<T>::iterator first_to_remove
 			= CGAL::remove_outliers(points.begin(), points.end(),
@@ -184,7 +184,7 @@ public:
 
 	void filter_process(std::vector<T>& points)	override	//if we use mine kd tree then this is not relevant
 	{
-		qDebug() << "GridSimplification process with " << cell_size << "\n";
+		qDebug() << "GridSimplification process with " << cell_size;
 		points.erase(CGAL::grid_simplify_point_set(points.begin(), points.end(), cell_size),
 			points.end());
 		
@@ -206,7 +206,7 @@ public:
 
 	void filter_process(std::vector<T>& points) override
 	{
-		qDebug() << "HiearchySimplification process with " << max_cluster_size <<" " <<  max_surface_variation  << "\n";
+		qDebug() << "HiearchySimplification process with " << max_cluster_size <<" " <<  max_surface_variation;
 
 		points.erase(CGAL::hierarchy_simplify_point_set(points.begin(), points.end(),
 			max_cluster_size, 
@@ -233,7 +233,7 @@ public:
 
 	void filter_process(std::vector<T>& points) override
 	{
-		qDebug() << "WLOPSimplification process with " << rp << " " << nr << "\n";
+		qDebug() << "WLOPSimplification process with " << retain_percentage << " " << neighbor_radius;
 
 		std::vector<Point> output;
 
@@ -274,7 +274,7 @@ public:
 
 	void filter_process(std::vector<T>& points)
 	{
-		qDebug() << "JetSmoothing process with " << nb_neighbors << "\n";
+		qDebug() << "JetSmoothing process with " << nb_neighbors;
 
 		CGAL::jet_smooth_point_set<Concurrency_tag>(points.begin(), points.end(), nb_neighbors);
 	}

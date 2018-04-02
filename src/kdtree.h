@@ -444,15 +444,15 @@ GLPaintFormat kdTree<Data>::drawNode(/*const unsigned int& bt*/)
 
 	Box act_box = _draw->box;
 
-	gpf.box_points.push_back(Data(act_box.getXMin(), act_box.getYMin(), act_box.getZMin()));
-	gpf.box_points.push_back(Data(act_box.getXMax(), act_box.getYMin(), act_box.getZMin()));
-	gpf.box_points.push_back(Data(act_box.getXMin(), act_box.getYMax(), act_box.getZMin()));
-	gpf.box_points.push_back(Data(act_box.getXMax(), act_box.getYMax(), act_box.getZMin()));
+	gpf.points.push_back(Data(act_box.getXMin(), act_box.getYMin(), act_box.getZMin()));
+	gpf.points.push_back(Data(act_box.getXMax(), act_box.getYMin(), act_box.getZMin()));
+	gpf.points.push_back(Data(act_box.getXMin(), act_box.getYMax(), act_box.getZMin()));
+	gpf.points.push_back(Data(act_box.getXMax(), act_box.getYMax(), act_box.getZMin()));
 
-	gpf.box_points.push_back(Data(act_box.getXMin(), act_box.getYMin(), act_box.getZMax()));
-	gpf.box_points.push_back(Data(act_box.getXMax(), act_box.getYMin(), act_box.getZMax()));
-	gpf.box_points.push_back(Data(act_box.getXMin(), act_box.getYMax(), act_box.getZMax()));
-	gpf.box_points.push_back(Data(act_box.getXMax(), act_box.getYMax(), act_box.getZMax()));
+	gpf.points.push_back(Data(act_box.getXMin(), act_box.getYMin(), act_box.getZMax()));
+	gpf.points.push_back(Data(act_box.getXMax(), act_box.getYMin(), act_box.getZMax()));
+	gpf.points.push_back(Data(act_box.getXMin(), act_box.getYMax(), act_box.getZMax()));
+	gpf.points.push_back(Data(act_box.getXMax(), act_box.getYMax(), act_box.getZMax()));
 
 	
 	gpf.ix.push_back(0);	gpf.ix.push_back(1);	gpf.ix.push_back(2);
@@ -475,6 +475,8 @@ GLPaintFormat kdTree<Data>::drawNode(/*const unsigned int& bt*/)
 	
 	//gpf.ix.push_back(1);	gpf.ix.push_back(5);	gpf.ix.push_back(7);
 	
+	gpf.col.push_back(QVector3D(1, 0, 0));
+
 	return gpf;
 }
 

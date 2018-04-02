@@ -7,6 +7,7 @@
 
 GraphicInterface::GraphicInterface()
 {
+	dialog = NULL;
 	timer = new QTimer(this);
 	timer->start(20);
 
@@ -33,7 +34,15 @@ GraphicInterface::GraphicInterface()
 	//---------------------------------
 	ui.glrender->setClearColor(QColor(255, 255, 0));
 	ui.glrender->attemptChangeDrawType(ui.display->currentIndex());
+//	ui.glrender->attemptChangePowerCrustDrawType(ui.power_c_draw->currentIndex());
+	ui.forkdtree->setVisible(false);
+	ui.powercrust->setVisible(false);
+	ui.poisson->setVisible(false);
+	ui.forkdtree->setVisible(false);
 	setCore(ui.core->value());
+
+	hovered_surface_item = 2;
+	acceptNewSurf();
 
 	//---------------------------------
 	setupSignals();
@@ -43,7 +52,7 @@ GraphicInterface::GraphicInterface()
 
 void GraphicInterface::setupSignals()
 {
-	connect(timer, &QTimer::timeout, this, [this]() { this->ui.glrender->attemptUpdate(); } );
+	connect(timer, &QTimer::timeout, this, [this]() { this->ui.glrender->attemptUpdate(this->timer->interval()); } );
 
 	connect(ui.actionExit, &QAction::triggered, this, [this]() { this->close(); });
 	connect(ui.actionExport, &QAction::triggered, this, &GraphicInterface::exportSurface);
@@ -61,6 +70,7 @@ void GraphicInterface::setupSignals()
 	connect(ui.left_child, &QPushButton::clicked, this, [this]() { this->ui.glrender->goNode(1); });
 	connect(ui.right_child, &QPushButton::clicked, this, [this]() { this->ui.glrender->goNode(2); });
 	connect(ui.parent, &QPushButton::clicked, this, [this]() { this->ui.glrender->goNode(0); });
+	connect(ui.parent, &QPushButton::clicked, this, [this]() { this->ui.glrender->nextCell(); });
 
 	connect(ui.core, SIGNAL(valueChanged(int)), this, SLOT(setCore(const int&)));
 	
@@ -77,12 +87,26 @@ void GraphicInterface::setupSignals()
 
 	//------------------
 	connect(ui.filters, &QToolBox::currentChanged, this, [this](const int & id) { this->active_filter_item = id; } );
+
+
+	//------------------- POWERCRUST
+
+	connect(ui.next_neigh, &QPushButton::clicked, this, [this]() { this->ui.glrender->nextNeighb(); });
+	connect(ui.next_cell, &QPushButton::clicked, this, [this]() { this->ui.glrender->goCell(1); });
+	connect(ui.prev_cell, &QPushButton::clicked, this, [this]() { this->ui.glrender->goCell(0); });
+	connect(ui.power_c_draw, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [this](const int & ind) { this->ui.glrender->attemptChangePowerCrustDrawType(ind); });
+
+	//------------------- POISSON
+
+	connect(ui.pois_angle, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), this, [this](const double& val) {this->ui.glrender->SetSurfaceProperty(0, ui.pois_angle->value(), ui.pois_maxtri->value(), ui.pois_surfapprerr->value()); });
+	connect(ui.pois_maxtri, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), this, [this](const double& val) {this->ui.glrender->SetSurfaceProperty(0, ui.pois_angle->value(), ui.pois_maxtri->value(), ui.pois_surfapprerr->value()); });
+	connect(ui.pois_surfapprerr, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), this, [this](const double& val) {this->ui.glrender->SetSurfaceProperty(0, ui.pois_angle->value(), ui.pois_maxtri->value(), ui.pois_surfapprerr->value()); });
+
 }
 
 void GraphicInterface::setupFilterActions()
 {
 	ui.filters->removeItem(0);
-	ui.surfacerec->removeItem(0);
 
 	ui.actionSimplifiers->setDisabled(true);
 	ui.actionSmoothers->setDisabled(true);
@@ -101,15 +125,20 @@ void GraphicInterface::setupFilterActions()
 	connect(ui.actionCGAL_based_Hieararchy, &QAction::hover, this, [this]() { { this->hovered_filter_item = 5; }});
 	connect(ui.actionGrid_mine, &QAction::triggered, this, &GraphicInterface::openSimplifierPropertyWindow);
 	connect(ui.actionGrid_mine, &QAction::hover, this, [this]() { { this->hovered_filter_item = 3; }});
+	connect(ui.actionCGAL_WLOP_algorithm, &QAction::triggered, this, &GraphicInterface::openSimplifierPropertyWindow);
+	connect(ui.actionCGAL_WLOP_algorithm, &QAction::hover, this, [this]() { { this->hovered_filter_item = 6; }});
 
 	//Smoother
 	connect(ui.actionCGAL_based_Jet_smoother, &QAction::triggered, this, &GraphicInterface::openSmootherFilterPropertyWindow);
-	connect(ui.actionCGAL_based_Jet_smoother, &QAction::hover, this, [this]() { { this->hovered_filter_item = 6; }});
+	connect(ui.actionCGAL_based_Jet_smoother, &QAction::hover, this, [this]() { { this->hovered_filter_item = 7; }});
 
 	//Surface Rec
 	connect(ui.actionCGAL_based_Poisson, &QAction::triggered, this, &GraphicInterface::openSurfacePropertyWindow);
+	connect(ui.actionCGAL_based_Poisson, &QAction::hover, this, [this]() { { this->hovered_surface_item = 1; }});
 	connect(ui.actionVoronoi_based, &QAction::triggered, this, &GraphicInterface::openSurfacePropertyWindow);
+	connect(ui.actionVoronoi_based, &QAction::hover, this, [this]() { { this->hovered_surface_item = 2; }});
 	connect(ui.actionPartial_diff, &QAction::triggered, this, &GraphicInterface::openSurfacePropertyWindow);
+	connect(ui.actionPartial_diff, &QAction::hover, this, [this]() { { this->hovered_surface_item = 3; }});
 }
 
 void GraphicInterface::openOutlierFilterPropertyWindow()
@@ -259,6 +288,12 @@ void GraphicInterface::openSimplifierPropertyWindow()
 			ui_simpl_filter.name_h->setText("CGAL Hieararchical simplifier");
 			break;
 		}
+		case 6:
+		{
+			ui_simpl_filter.wlop_name->setText("WLOP simplifier");
+			ui_simpl_filter.wlop->raise();
+			break;
+		}
 	}
 
 	dialog->show();
@@ -348,6 +383,35 @@ void GraphicInterface::acceptNewSimplFilter()
 
 			break;
 		}
+		case 6:
+		{
+			float rp = ui_simpl_filter.rp->value();
+			float nr = ui_simpl_filter.nr->value();
+
+			if (!ui.glrender->addNewSimplifierFilter(4, rp, nr))
+			{
+				QMessageBox::warning(this, "Oops", "Something happened");
+				return;
+			}
+
+			name = ui_simpl_filter.wlop_name->text();
+
+			widget = new QWidget();
+			ui_filters.push_back(new Ui::sfcWidgetF());
+			ui_filters.back()->setupUi(widget);
+			ui_filters.back()->wlopCgal->raise();
+			ui_filters.back()->rp->setValue(rp);
+			ui_filters.back()->nr->setValue(nr);
+
+			connect(ui_filters.back()->delete_wlop, SIGNAL(clicked()), this, SLOT(deleteFilter()));
+			connect(ui_filters.back()->rp, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), this, [this](const double& val)
+			{ this->ui.glrender->SetFilterProperty(active_filter_item,  val, ui_filters[active_filter_item]->nr->value()); });
+			connect(ui_filters.back()->nr, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), this, [this](const double& val)
+			{ this->ui.glrender->SetFilterProperty(active_filter_item, ui_filters[active_filter_item]->rp->value(), val); });
+
+			break;
+		}
+
 	}
 	ui.filters->addItem(widget, name);
 	active_filter_item = ui_filters.size() - 1;
@@ -367,7 +431,7 @@ void GraphicInterface::openSmootherFilterPropertyWindow()
 
 	switch (hovered_filter_item)
 	{
-		case 6:
+		case 7:
 		{
 			ui_smo_filter.name->setText("Jet smoother");
 			ui_smo_filter.jet->raise();
@@ -384,7 +448,7 @@ void GraphicInterface::acceptNewSmothFilter()
 
 	switch (hovered_filter_item)
 	{
-		case 6:
+		case 7:
 		{
 			int kn = ui_smo_filter.kn_jet->value();
 
@@ -422,16 +486,74 @@ void GraphicInterface::openSurfacePropertyWindow()
 
 	connect(ui_surf.ok, SIGNAL(clicked()), this, SLOT(acceptNewSurf()));
 	connect(ui_surf.cancel, SIGNAL(clicked()), this, SLOT(cancelDialog()));
+
+	switch (hovered_surface_item)
+	{
+		case 1:
+		{
+			ui_surf.poisson->raise();
+			break;
+		}
+		case 2:
+		{
+			ui_surf.powercrust->raise();
+			break;
+		}
+		default:
+			delete dialog;
+			return;
+	}
+
 	dialog->show();
 }
 
 void GraphicInterface::acceptNewSurf()
 {
-	if (!ui.glrender->addNewSurfaceReconstructor(1))
+	switch (hovered_surface_item)
 	{
-		QMessageBox::warning(this, "Oops", "Something happened");
-		return;
+		case 1:
+		{
+			float angle = ui_surf.angle->value();
+			float max_tri = ui_surf.trisize->value();
+			float surf_appr_err = ui_surf.apprerr->value();
+
+			if (!ui.glrender->addNewSurfaceReconstructor(0, angle, max_tri, surf_appr_err))
+			{
+				QMessageBox::warning(this, "Oops", "Something happened");
+				return;
+			}
+
+			ui.pois_angle->setValue(angle);
+			ui.pois_maxtri->setValue(max_tri);
+			ui.pois_surfapprerr->setValue(surf_appr_err);
+
+			ui.powercrust->setVisible(false);
+			ui.poisson->setVisible(true);
+			ui.poisson->raise();
+
+			break;
+		}
+
+		case 2:
+		{
+			if (!ui.glrender->addNewSurfaceReconstructor(1))
+			{
+				QMessageBox::warning(this, "Oops", "Something happened");
+				return;
+			}
+
+			ui.power_c_draw->setCurrentIndex(0);
+			ui.glrender->attemptChangePowerCrustDrawType(ui.power_c_draw->currentIndex());
+
+			ui.powercrust->setVisible(true);
+			ui.poisson->setVisible(false);
+			ui.powercrust->raise();
+
+			break;
+		}
 	}
+	
+	if (dialog == NULL) return;	//TODO REMOVE THIS LATER
 
 	dialog->close();
 	delete dialog;

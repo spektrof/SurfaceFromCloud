@@ -75,6 +75,7 @@ private:
 	unsigned int active_filter_item;
 
 	unsigned int hovered_filter_item;
+	unsigned int hovered_surface_item;
 
 	QTimer *timer;
 

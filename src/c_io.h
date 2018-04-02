@@ -13,7 +13,6 @@
 //#include <boost\thread\mutex.hpp>
 //#include <boost\thread\thread.hpp>
 
-#include <boost\chrono.hpp>
 #include <boost\filesystem\fstream.hpp>
 
 #include <QDebug>
@@ -21,16 +20,18 @@
 template <typename Data_3D>
 class C_IO
 {
-	typedef boost::chrono::high_resolution_clock::time_point time_p;
-	typedef boost::chrono::milliseconds milliseconds;
-	typedef boost::chrono::duration<float> duration_f;
-	typedef boost::chrono::high_resolution_clock hrclock;
-	typedef boost::chrono::high_resolution_clock::time_point time_p;
+	enum cloud_sources
+	{
+		RANDOM,
+		FILE
+	};
 
 public:
-	C_IO() : box(Box(-1.0f,1.0f)), n_point(0), file_index(1)
+	C_IO() : box(Box(-0.1f, 0.1f)), n_point(0), file_index(1), cloud_s(FILE)
 	{
 		loadCalibrations();
+		started = false;
+		run_count = 0;
 	}
 
 	~C_IO() {}
@@ -43,7 +44,10 @@ public:
 	void setBox(const Section& _x, const Section& _y, const Section& _z) { box = Box(_x, _y, _z); }
 	void setBox(const float& xmi, const float& xma, const float& ymi, const float& yma, const float& zmi, const float& zma) { box = Box(xmi, xma, ymi, yma, zmi, zma); }
 
-	Box* getBoxObject() { return &box;  }
+	Box* getBoxObject() { return &box; }
+	Box getBox() const { return box; }
+
+	void swapStartFlag() { started = 1 - started; run_count = 0; }
 
 	//---------------------------
 	void setFileName(char* fn)
@@ -77,7 +81,7 @@ public:
 		for (int i=0; i < kinectSources; ++i)
 		{
 			std::ifstream file(getFile(i), std::ios::binary);
-			if (!file.fail()) existOne = true;;
+			if (!file.fail()) existOne = true;
 		}
 		
 		return existOne;
@@ -88,9 +92,46 @@ public:
 		return checkFileType();
 	}
 
-	std::vector<Data_3D> getCloudRandom();
-	std::vector<Data_3D>  getCloudSpecific();
-	std::vector<Data_3D> getCloudFromFile();
+	void setCloudSource(const unsigned int& type)
+	{
+		started = false;
+		run_count = 0;
+		cloud_s = cloud_sources(type);
+	}
+
+	ProcessReturns load_process(std::vector<Data_3D>& points)
+	{
+		if (!started) return PROCESS_STOPPED;
+
+		switch (cloud_s)
+		{
+			case RANDOM:
+			{
+				if (run_count > 0 /*&& !repeatable*/) return NO_INPUT_DATA;
+				run_count = 1;
+
+				points.clear();
+				points = getCloudRandom();
+				return CLOUD_LOAD_SUCCESS;
+			}
+			case FILE:
+			{
+				if (!nextFileExist())
+				{
+					//qDebug() << "Next FIle doesnt exist!";
+					resetFileIndex();
+					/*if (!repeatable)*/ return NO_INPUT_DATA;
+				}
+
+				points.clear();
+				points = getCloudFromFile();
+
+				return CLOUD_LOAD_SUCCESS;
+			}
+			default:
+				return UNDEFINED_ERROR;
+		}
+	}
 
 protected:
 	void loadCalibrations();
@@ -129,6 +170,10 @@ protected:
 		float x,y,z;
 		int r,g,b;
 
+		float minX = FLT_MAX, maxX = FLT_MIN;
+		float minY = FLT_MAX, maxY = FLT_MIN;
+		float minZ = FLT_MAX, maxZ = FLT_MIN;
+
 		for (int i = 0; i < this->vertex_number[id]; ++i)
 		{
 			//TODO: any error??? lets think
@@ -137,17 +182,42 @@ protected:
 			(*in) >> x >> y >> z >> r >> g >> b;
 			points->insert(Data_3D(x,-y,z));
 
+			minX = minX > x ? x : minX;
+			maxX = maxX < x ? x : maxX;
+			minY = minY > -y ? -y : minY;
+			maxY = maxY < -y ? -y : maxY; 
+			minZ = minZ > z ? z : minZ;
+			maxZ = maxZ < z ? z : maxZ;
 			//mx.unlock();
 
 			//TODO: eredeti koordrendszer - talán a színekhez??
 			// R * (v-t) - inverze:  transp(R)*v + t
 		}
 	
+		if (!box.isInside(minX, minY, minZ) || !box.isInside(maxX, maxY, maxZ))
+		{
+			box = Box(minX < box.getXMin() ? minX : box.getXMin()
+				    , maxX > box.getXMax() ? maxX : box.getXMax()
+					, minY < box.getYMin() ? minY : box.getYMin()
+					, maxY > box.getYMax() ? maxY : box.getYMax()
+					, minZ < box.getZMin() ? minZ : box.getZMin()
+					, maxZ > box.getZMax() ? maxZ : box.getZMax() );
+		}
+		qDebug() << "\tOUR BOX IS: " << box.getXMin() << " " << box.getXMax() << " " << box.getYMin() << " " << box.getYMax() << " " << box.getZMin() << " " << box.getZMax();
+
 		//in->clear();
 		//return true;
 	}
 	
+	std::vector<Data_3D> getCloudRandom();
+	std::vector<Data_3D>  getCloudSpecific();
+	std::vector<Data_3D> getCloudFromFile();
+
 private:
+	cloud_sources cloud_s;
+	bool started;
+	int run_count;
+
 	//*******************
 	// Random
 	Box box;
@@ -262,11 +332,12 @@ std::vector<Data_3D> C_IO<Data_3D>::getCloudFromFile()
 	thread_ptrs.clear();
 	*/
 
-	qDebug() << (boost::chrono::duration_cast<milliseconds>(hrclock::now() - t1)).count() << " with " << tmp.size() << " points\n";
+	qDebug() << "LOAD under " << (boost::chrono::duration_cast<milliseconds>(hrclock::now() - t1)).count() << " ms with " << tmp.size() << " points";
 
 	file_index++;
+	qDebug() << "\tOUR BOX IS: " << box.getXMin() << " " << box.getXMax() << " " << box.getYMin() << " " << box.getYMax() << " " << box.getZMin() << " " << box.getZMax();
 
-	box = Box(-1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);
+	//box = Box(-1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);
 	//box = Box(minx, maxx, miny, maxy, minz, maxz);
 
 	return std::vector<Data_3D>(tmp.begin(), tmp.end());

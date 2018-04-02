@@ -112,7 +112,7 @@ public:
 	bool checkFileType() { return c_io.checkFileType(); }
 
 	std::vector<Data> getData() const { return data;  }
-
+	Box getBox() const { return c_io.getBox();  }
 	/*void nearest() { 
 		bt = BOXDRAWTYPES(1 - bt); 
 	}

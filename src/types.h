@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <boost\chrono.hpp>
 
 enum ProcessReturns
 {
@@ -18,13 +19,61 @@ enum DrawPossibilites
 	POINTSS,
 	BOX,
 	SURFACE,
+	ALGORITHM,
+	TEST,
 	UNDEFINED
+};
+
+enum PowerCrustDrawPossibilites
+{
+	RESULT,
+	DELAUNEY,
+	VORONOI_DIAGRAM,
+	VORONOI_WITH_SURF_POINT,
+	VORONOI_BY_CELL_FULL,
+	VORONOI_WITH_CELLDUAL,
+	POLES,
+	POWER_DIAGRAM,
+	POWER_DIAGRAM_BY_CELL,
+	POWER_DIAGRAM_CELL_WITH_NEIGHBOURS,
+	INNER_POLES,
+	OUTER_POLES,
+	UNKNOWN_POLES,
+	INNER_OUTER_POLES,
+	MEDIAL_AXIS,
+	POWER_SHAPE
+};
+
+template<typename T>
+struct triple
+{
+	triple(const unsigned int& f, const unsigned int& s, const unsigned int& t) : first(f), second(s), third(t) {}
+
+	T first, second, third;
+
+	template<typename T>
+	bool operator < (const triple<T>& t) const
+	{
+		return (first < t.first) || (first == t.first && second < t.second) || (first == t.first && second == t.second && third < t.third);
+	}
+
+	template<typename T>
+	bool operator <= (const triple<T>& t) const
+	{
+		return (first <= t.first) || (first == t.first && second <= t.second) || (first == t.first && second == t.second && third <= t.third);
+	}
 };
 
 static float sumOfsquare(const float& x, const float& y, const float& z)
 {
 	return x * x + y * y + z * z;
 }
+
+typedef boost::chrono::high_resolution_clock::time_point time_p;
+typedef boost::chrono::milliseconds milliseconds;
+typedef boost::chrono::duration<float> duration_f;
+typedef boost::chrono::high_resolution_clock hrclock;
+typedef boost::chrono::high_resolution_clock::time_point time_p;
 
 /*
 // Coords & Textures later-------------- -
@@ -110,7 +159,7 @@ struct Box
 	Box(const Section& _x, const Section& _y, const Section& _z) : x(_x), y(_y), z(_z) {}
 	Box(const float& xmi, const float& xma, const float& ymi, const float& yma, const float& zmi, const float& zma) : x(Section(xmi, xma)), y(Section(ymi, yma)), z(Section(zmi, zma)) {}
 
-	//bool isInside(const Point& c) { return x.isBetween(c.x()) && y.isBetween(c.y()) && z.isBetween(c.z()); }
+	bool isInside(const float& cx, const float& cy, const float& cz) { return x.isBetween(cx) && y.isBetween(cy) && z.isBetween(cz); }
 
 	float getXMin() const { return x.min; }
 	void setXMin(const float& v) {		x.min = v; }
@@ -130,6 +179,12 @@ struct Box
 	float getZLength() const { return z.max - z.min; }
 
 	float getVolume() const { return getXLength() * getYLength() * getZLength(); }
+
+	Box operator *(const float& scale)
+	{
+		return Box(this->getXMin() * scale, this->getXMax() * scale, this->getYMin() * scale, this->getYMax() * scale, this->getZMin() * scale, this->getZMax() * scale);
+	}
+
 };
 
 //-----------------------------------------------

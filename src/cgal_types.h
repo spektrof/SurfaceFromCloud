@@ -2,9 +2,12 @@
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include "defines.h"
+#include <CGAL/Polyhedron_3.h>
+#include <CGAL/Triangle_3.h>
+#include <CGAL/Segment_3.h>
+#include <QVector3D>
 
 #ifdef ENABLE_CGAL_SURFACE
-#include <CGAL/Polyhedron_3.h>
 #include <CGAL/property_map.h>
 #endif
 //#include <CGAL/Point_with_normal_3.h>
@@ -13,13 +16,16 @@ typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
 typedef Kernel::FT FT;
 
 typedef Kernel::Point_3 Point;
-#ifdef ENABLE_CGAL_SURFACE
 typedef CGAL::Polyhedron_3<Kernel> Polyhedron;
+typedef CGAL::Triangle_3<Kernel> Triangle;
+typedef CGAL::Segment_3<Kernel> Segment;
+
+//#ifdef ENABLE_CGAL_SURFACE
 typedef typename Polyhedron::Vertex_const_iterator VCI;
 typedef typename Polyhedron::Facet_const_iterator FCI;
 typedef typename Polyhedron::Halfedge_around_facet_const_circulator HFCC;
 typedef CGAL::Inverse_index<VCI> Index;
-#endif
+//#endif
 
 typedef Kernel::Vector_3 Vector;
 typedef Kernel::Sphere_3 Sphere;
@@ -45,18 +51,24 @@ struct Color
 
 struct GLPaintFormat
 {
-	std::vector<Point> p;
+	std::vector<Point> points;
+	std::vector<QVector3D> points_col;
+	std::vector<QVector3D> col;
 	std::vector<unsigned int> ix;
-	std::vector<Color> col;
-	std::vector<Point> box_points;
+	std::vector<std::pair<Point, float>> centers_with_radius;
+	std::vector<unsigned int> center_part_lengths;
+	std::vector<unsigned int> point_part_lengths;
 
 	GLPaintFormat() {}
 	GLPaintFormat(const std::vector<Point>& _p) :
-		p(_p) {}
-	GLPaintFormat(const std::vector<Point>& _p, const std::vector<Color>& c) :
-		p(_p), col(c) {}
-	GLPaintFormat(const std::vector<Point>& _p, const std::vector<unsigned int>& _i, const std::vector<Color>& c) :
-		p(_p), ix(_i), col(c) {}
+		points(_p) {
+		col.push_back(QVector3D(1, 0, 0));
+		points_col.push_back(QVector3D(1, 0, 0));
+	}
+	GLPaintFormat(const std::vector<Point>& _p, const std::vector<QVector3D>& c) :
+		points(_p), col(c) {}
+	GLPaintFormat(const std::vector<Point>& _p, const std::vector<unsigned int>& _i, const std::vector<QVector3D>& c) :
+		points(_p), ix(_i), col(c) {}
 };
 
 namespace CGALTool

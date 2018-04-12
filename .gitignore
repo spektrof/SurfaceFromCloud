@@ -16,7 +16,6 @@ x86/
 *_i.h
 *.ilk
 *.meta
-*.obj
 *.pch
 *.pdb
 *.pgc

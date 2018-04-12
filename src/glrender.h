@@ -18,6 +18,7 @@ class GLRender : public QOpenGLWidget, protected QOpenGLFunctions
 
 #define PROGRAM_VERTEX_ATTRIBUTE 0
 #define PROGRAM_TEXCOORD_ATTRIBUTE 1
+#define PROGRAM_COLOR_ATTRIBUTE 2
 
 public:
 	explicit GLRender(QWidget *parent = 0);
@@ -135,6 +136,12 @@ public:
 		sfg.deleteFilter(id);
 	}
 
+	void export_to_obj()
+	{
+		sfg.export_triangle_mesh_to_obj();
+		sfg.export_triangle_mesh_with_tex_to_obj();
+	}
+
 signals:
 	void clicked();		//dont need click signal
 	void step_finished();
@@ -157,6 +164,8 @@ protected:
 	void initBaseShaders();
 	void initSphereShaders();
 
+	void load_texture(std::vector<std::string>&);
+
 private:
 	void makeObject();
 	void makeObjectFromCloud();
@@ -167,12 +176,13 @@ private:
 	void renderObject(const QMatrix4x4& mvp, const QMatrix4x4& m);
 	void renderPowerCrustObject(const QMatrix4x4& mvp, const QMatrix4x4& m);
 
-	void DrawCells(QOpenGLBuffer&, QOpenGLBuffer&, const QMatrix4x4&, QVector3D&, bool transparent = true);
-	void DrawSphere(QOpenGLBuffer&, QOpenGLBuffer&, const QMatrix4x4&, std::vector<std::pair<QVector3D, float>>&,const int&, QVector3D&, bool transparent = true);
-	void DrawSegments(QOpenGLBuffer& point_buffer, QOpenGLBuffer& index_buffer, const int& starter_index, const int& last_index, const QMatrix4x4& mvp, QVector3D& col, bool transparent = true);
+	void DrawCells(QOpenGLShaderProgram*, QOpenGLBuffer&, QOpenGLBuffer&, const int& starter_index, const int& last_index, const QMatrix4x4&, QVector3D&, bool transparent = true);
+	void DrawSphere(QOpenGLShaderProgram*, QOpenGLBuffer&, QOpenGLBuffer&, const QMatrix4x4&, std::vector<std::pair<QVector3D, float>>&,const int&, QVector3D&, bool transparent = true);
+	void DrawSegments(QOpenGLShaderProgram*, QOpenGLBuffer& point_buffer, QOpenGLBuffer& index_buffer, const int& starter_index, const int& last_index, const QMatrix4x4& mvp, QVector3D& col, bool transparent = true);
 
 	enum AdditionalBind
 	{
+		COLOR,
 		TEXTURE,
 		ALL_MATRICIES,
 		UNKNOWN
@@ -185,10 +195,15 @@ private:
 	int xRot;
 	int yRot;
 	int zRot;
+
+	unsigned int k_ind;
+
 	QOpenGLTexture *textures[6];
-	QOpenGLShaderProgram *base;
-	QOpenGLShaderProgram *sphere;
-	QOpenGLBuffer vbo;		//TODO: delete this later, just an example for drawing
+	QOpenGLTexture *kinect_textures[4];
+	QOpenGLShaderProgram *pc_base;	//point color pairs
+	QOpenGLShaderProgram *pt_base;	//point text coord pairs
+	QOpenGLShaderProgram *p_base;	//point with uniform col
+	QOpenGLShaderProgram *sphere;		//mybe dont need
 	QOpenGLBuffer cloud_vbo;
 	QOpenGLBuffer elementbuffer;
 	QOpenGLBuffer m_quad_vb;

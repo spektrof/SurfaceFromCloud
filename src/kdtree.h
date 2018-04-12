@@ -1,30 +1,60 @@
 #pragma once
 
 #include "types.h"
-#include "cloudcontainer.h"
+#include "cgal_types.h"
 #include "taskscheduler.h"
 
 #include <set>
+#include <queue>
 #include <cmath> //for log2
-#include <boost/chrono.hpp>
 #include <QDebug>
 
-template <typename Data>
-class kdTree : public CloudContainer<Data>
+class kdTree
 {
 	//task struct, task* megy a taskmanagerbe - hátrány nekünk kell megszüntetni, elõny: eltünik a start és a length
+	struct node;
+	typedef std::pair<float, node*> DistanceTuple;
 
-	typedef boost::chrono::high_resolution_clock::time_point time_p;
-	typedef boost::chrono::milliseconds milliseconds;
-	typedef boost::chrono::duration<float> duration_f;
-	typedef boost::chrono::high_resolution_clock hrclock;
-	typedef boost::chrono::high_resolution_clock::time_point time_p;
+	struct LargestOnTop
+	{
+		bool operator()(const DistanceTuple &a, const DistanceTuple &b) const { return a.first < b.first; }
+	};
 
 public:
+
+	typedef std::priority_queue<DistanceTuple, std::vector<DistanceTuple>, LargestOnTop > kNearest_queue;
+
+	struct nearest_node
+	{
+		node* neighb;
+		float distance;
+		nearest_node(node* n = NULL, const float& d = FLT_MAX) : neighb(n), distance(d) {}
+	};
+
+private:
+	struct node
+	{
+		node* left, *right;
+		node* parent;
+
+		int depth, length;
+		Box box;			//TODO: just pointer and make an other node for boxes -> compute_bounding_boxes
+
+		point_uv_tuple* point;	//pointer to node val
+		point_uv_tuple* start;	//pointer to starter point in the vector
+
+		nearest_node nn;
+		kNearest_queue knn;
+		//float spacing;		//TODO: some functions for compute this, i.e. centroid , compute_average_spacing()
+
+		node(node* p, point_uv_tuple* s, const int& d, const int& lg, Box b, point_uv_tuple* po = NULL, node* l = NULL, node* r = NULL, const nearest_node& _nn = nearest_node())
+			: parent(p), start(s), depth(d), length(lg), box(b), point(po), left(l), right(r), nn(_nn) {}
+	};
+
 	typedef typename node* kdnode_ptr;
 
-	kdTree(const unsigned int& pCloudType, const int& ma, bool repeat, const int& thr_c = 4, const int& n_poi = 20000, const Section& s = Section(-0.1f, 0.1f))
-		: CloudContainer<Data>(pCloudType, ma, repeat, n_poi, s),
+public:
+	kdTree(const int& ma, const int& thr_c) :
 		root(NULL), _draw(NULL),
 		stopBuildDepth(STOPLEVEL),
 		kn(1),
@@ -34,29 +64,17 @@ public:
 		changeThreadCapacity(thr_c);
 	}
 
-	kdTree(const unsigned int& pCloudType, const int& ma, bool repeat, const int& thr_c, char* filename) 
-		: CloudContainer<Data>(pCloudType, ma, repeat, filename),
-		root(NULL), _draw(NULL),
-		stopBuildDepth(STOPLEVEL),
-		kn(1),
-		sort_time(duration_f(0.0f)), calc_time(milliseconds(0))
-	{
-		t_schedular = new TaskSchedular<kdTree, node>();
-		t_schedular->setCloudThreadCapacity(thr_c);
-	}
-
 	~kdTree() {
 		release();
 		delete t_schedular;
 	}
 
-	//Overrides
-	void build() override
+	void build(std::vector<point_uv_tuple>& data, const Box& box)
 	{
 		calc_time = milliseconds(0);
 		sort_time = duration_f(0.0f);
 
-		root = new node(NULL, &data[0], 0, data.size(), *box, NULL, NULL, NULL);	//TODO CHECK DATA
+		root = new node(NULL, &data[0], 0, data.size(), box, NULL, NULL, NULL);	//TODO CHECK DATA
 		_draw = root;
 
 		//TODO: test the performance
@@ -68,22 +86,10 @@ public:
 		if (PRINT) inOrderPrint(root, 0);
 	}
 
-	void release() override
+	void release() 
 	{
 		_draw = NULL;
 		if (root) releaseNode(root);
-
-		data.clear();
-		//TODO: IF WE ADD DIFFERENT POINT -> new variable with one more clear here
-//		active_data.clear();
-	}
-
-	ProcessReturns load_process() override
-	{
-		ProcessReturns res;
-		if (res = getDataFromClient()) return res;
-
-		return res;
 	}
 
 	//REFACTOR
@@ -92,20 +98,18 @@ public:
 	//viszont meg kell csinálni, ha nem akarok minden pontot kirajzolni
 	// - -> 1x végig kell mennem rekurzívan a kapott fán, ha 1 volt az accuracy ha nem
 
-	ProcessReturns build_process(const std::vector<Data>& input) override
+	ProcessReturns build_process(std::vector<point_uv_tuple>& input, const Box& box) 
 	{
-		data = input;
-
 		time_p t1 = hrclock::now();
 		time_p t2;
 
-		build();
+		build(input, box);
 		if (!root) return UNDEFINED_ERROR;		//TODO
 
 		//----------------------------------------
 		t = 0;
 		//addNeighbours();
-		addKNeighbours();
+		//addKNeighbours(input);
 
 		//----------------------------------------
 		t2 = hrclock::now();
@@ -115,20 +119,24 @@ public:
 	}
 
 	//------------------------------
-	void changeThreadCapacity(const unsigned int& tc) override;
+	inline void changeThreadCapacity(const unsigned int& tc);
 
-	void getTimes(float& join, float& sort, float& all) const override;
-	unsigned int getThreadCapacity() const override { return t_schedular->getCloudThreadCapacity(); }
-	unsigned int getPointNumbFromBox() const override;
+	inline void getTimes(float& join, float& sort, float& all) const;
+	unsigned int getThreadCapacity() const { return t_schedular->getCloudThreadCapacity(); }
 
-	void goLeftNode() override { if (_draw && _draw->left)	_draw = _draw->left; }
-	void goRightNode() override { if (_draw && _draw->right)	_draw = _draw->right; }
-	void goParentNode() override { if (_draw && _draw->parent) _draw = _draw->parent; }
+	void goLeftNode() { if (_draw && _draw->left)	_draw = _draw->left; }
+	void goRightNode() { if (_draw && _draw->right)	_draw = _draw->right; }
+	void goParentNode() { if (_draw && _draw->parent) _draw = _draw->parent; }
 
-	node* getRootPtr() const override { return root; }
-	GLPaintFormat drawNode(/*const unsigned int&*/) override;
+	kdnode_ptr getRootPtr() const { return root; }
+	GLPaintFormat drawNode(/*const unsigned int&*/);
 
 	//--------------------------------------------------------------
+
+	inline void nearest_p(Point *query, kdnode_ptr currentNode, nearest_node& best);
+
+	inline void knearest_p(Point *query, node* currentNode, kNearest_queue& best);
+
 	void nearestAll(node* query, bool stop = false, const int& stopDepth = 0)
 	{
 		//test = 0;
@@ -168,17 +176,22 @@ public:
 	}
 
 	//------------------------------
-	void inOrderPrint(node* r, const int& level);
+	inline void inOrderPrint(node* r, const int& level);
+
+	void set_kn(const unsigned int& k)
+	{
+		kn = k;
+	}
 
 protected:
 	//Tree buildings
-	void buildWithAutomech();
-	void buildRecursive(node* r, bool stop = false, const int& level = 0);
-	void sortPartVector(const int& axis, Data* c, const int& length);
+	inline void buildWithAutomech();
+	inline void buildRecursive(node* r, bool stop = false, const int& level = 0);
+	inline void sortPartVector(const int& axis, point_uv_tuple* c, const int& length);
 
 	//----------------
 	// Neighbours calculators
-	void addNeighbours()
+	void addNeighbours(const std::vector<point_uv_tuple>& data)
 	{
 		if (data.size() > CLOUDRECURSIVEPOINTCAP && t_schedular->getCloudThreadCapacity() >= 2)
 		{
@@ -194,7 +207,7 @@ protected:
 			nearestAll(root);
 	}
 
-	void addKNeighbours()
+	void addKNeighbours(const std::vector<point_uv_tuple>& data)
 	{
 		if (data.size() > CLOUDRECURSIVEPOINTCAP && t_schedular->getCloudThreadCapacity() >= 2)
 		{
@@ -224,25 +237,25 @@ protected:
 		knearest(query->point, root, query->knn);
 	}
 
-	void nearest(Data *query, node* currentNode, nearest_node& best);
+	inline void nearest(point_uv_tuple *query, node* currentNode, nearest_node& best);
 
-	void knearest(Data *query, node* currentNode, kNearest_queue& best);
+	inline void knearest(point_uv_tuple *query, node* currentNode, kNearest_queue& best);
 
 	//----------------
 	//Others
-	void releaseNode(node*);
+	inline void releaseNode(node*);
 
-	void getActivePoints(std::vector<Data>& active_points, node* r = NULL);
+	inline void getActivePoints(std::vector<point_uv_tuple>& active_points, node* r = NULL);
 
 private:
-	//node* _nearest;
-	node * root;
-	node* _draw;
+	kdnode_ptr root;
+	kdnode_ptr _draw;
 
 	unsigned int stopBuildDepth;
-	TaskSchedular<kdTree, node>* t_schedular;	//TODO: in cloudcontainer???
-												//REFACTOR mybe
+	TaskSchedular<kdTree, node>* t_schedular;
+											
 	int kn;										//TODO: better name?? k nearest neighbours
+	unsigned int meshaccuracy;
 
 	duration_f sort_time;
 	milliseconds calc_time;
@@ -254,8 +267,7 @@ private:
 //--------------------------
 //---		-----		----
 //million point under 0,4 sec with 4 thread
-template <typename Data>
-void kdTree<Data>::buildWithAutomech()
+inline void kdTree::buildWithAutomech()
 {
 	if (root->depth != stopBuildDepth) buildRecursive(root, true, stopBuildDepth);
 	else t_schedular->addTask(root);
@@ -266,10 +278,9 @@ void kdTree<Data>::buildWithAutomech()
 	t_schedular->joinAll();		//wait our threads
 }
 
-template <typename Data>
-void kdTree<Data>::buildRecursive(node* r, bool stop, const int& stopDepth)
+inline void kdTree::buildRecursive(node* r, bool stop, const int& stopDepth)
 {
-	if (r->length == 1 || r->length <= meshaccuracy || r->box.getVolume() < MINVOLUME)
+	if (r->length == 1 /*|| r->length <= meshaccuracy || r->box.getVolume() < MINVOLUME*/)
 	{
 		r->point = r->start + (r->length >> 1);
 		return;
@@ -294,18 +305,18 @@ void kdTree<Data>::buildRecursive(node* r, bool stop, const int& stopDepth)
 
 	if (!axis)
 	{
-		Lbox.setXMax(r->point->x());
-		Rbox.setXMin(r->point->x());
+		Lbox.setXMax(r->point->first.x());
+		Rbox.setXMin(r->point->first.x());
 	}
 	else if (axis == 1)
 	{
-		Lbox.setYMax(r->point->y());
-		Rbox.setYMin(r->point->y());
+		Lbox.setYMax(r->point->first.y());
+		Rbox.setYMin(r->point->first.y());
 	}
 	else
 	{
-		Lbox.setZMax(r->point->z());
-		Rbox.setZMin(r->point->z());
+		Lbox.setZMax(r->point->first.z());
+		Rbox.setZMin(r->point->first.z());
 	}
 
 	r->left = r->point - r->start == 0 ? NULL : new node(r, r->start, r->depth + 1, r->point - r->start, Lbox);
@@ -326,8 +337,7 @@ void kdTree<Data>::buildRecursive(node* r, bool stop, const int& stopDepth)
 	}
 }
 
-template <typename Data>
-void kdTree<Data>::releaseNode(node* r)
+inline void kdTree::releaseNode(node* r)
 {
 	node* _l = r->left;
 	node* _r = r->right;
@@ -338,8 +348,7 @@ void kdTree<Data>::releaseNode(node* r)
 	if (_r) releaseNode(_r);
 }
 
-template <typename Data>
-void kdTree<Data>::sortPartVector(const int& axis, Data* start, const int& length)
+inline void kdTree::sortPartVector(const int& axis, point_uv_tuple* start, const int& length)
 {
 	if (axis  == 2)
 	std::nth_element(start, start + length /2, start + length, CGALTool::ZXYOrder());
@@ -354,14 +363,13 @@ void kdTree<Data>::sortPartVector(const int& axis, Data* start, const int& lengt
 //---		-----		----
 // Neighbours
 
-template <typename Data>
-void kdTree<Data>::nearest(Data *query, node* currentNode, nearest_node& best) {
+inline void kdTree::nearest(point_uv_tuple *query, node* currentNode, nearest_node& best) {
 	if (!currentNode) return;
 	//test++;
 
 	int axis = currentNode->depth % DIMENSION;
 
-	float d = sumOfsquare(currentNode->point->x - query->x, currentNode->point->y - query->y, currentNode->point->z - query->z);
+	float d = sumOfsquare(currentNode->point->first.x() - query->first.x(), currentNode->point->first.y() - query->first.y(), currentNode->point->first.z() - query->first.z());
 
 	if (d == 0.0f)	//megtaláltuk a pontunkat, mindkét gyerek irányba menni kell mert a pont rajta van a vágósíkon
 	{
@@ -371,7 +379,7 @@ void kdTree<Data>::nearest(Data *query, node* currentNode, nearest_node& best) {
 	}
 
 	//adott vágósíktól vett távolság
-	float dx = axis == 0 ? currentNode->point->x - query->x : axis == 1 ? currentNode->point->y - query->y : currentNode->point->z - query->z;
+	float dx = axis == 0 ? currentNode->point->first.x() - query->first.x() : axis == 1 ? currentNode->point->first.y() - query->first.y() : currentNode->point->first.z() - query->first.z();
 
 	if (d < best.distance) {
 		best.neighb = currentNode;
@@ -385,13 +393,43 @@ void kdTree<Data>::nearest(Data *query, node* currentNode, nearest_node& best) {
 	nearest(query, _far, best);
 }
 
-template <typename Data>
-void kdTree<Data>::knearest(Data *query, node* currentNode, kNearest_queue& best) {
+inline void kdTree::nearest_p(Point *query, kdnode_ptr currentNode, nearest_node& best)
+{
+	if (best.distance == 0) return;
 	if (!currentNode) return;
 
 	int axis = currentNode->depth % DIMENSION;
 
-	float d = sumOfsquare(currentNode->point->x() - query->x(), currentNode->point->y() - query->y(), currentNode->point->z() - query->z());
+	float d = sumOfsquare(currentNode->point->first.x() - query->x(), currentNode->point->first.y() - query->y(), currentNode->point->first.z() - query->z());
+
+	/*if (d == 0.0f)	//megtaláltuk a pontunkat, mindkét gyerek irányba menni kell mert a pont rajta van a vágósíkon
+	{
+		nearest_p(query, currentNode->left, best);
+		nearest_p(query, currentNode->right, best);
+		return;
+	}*/
+
+	//adott vágósíktól vett távolság
+	float dx = axis == 0 ? currentNode->point->first.x() - query->x() : axis == 1 ? currentNode->point->first.y() - query->y() : currentNode->point->first.z() - query->z();
+
+	if (d < best.distance) {
+		best.neighb = currentNode;
+		best.distance = d;
+	}
+
+	node* _near = dx <= 0 ? currentNode->right : currentNode->left;
+	node* _far = dx <= 0 ? currentNode->left : currentNode->right;
+	nearest_p(query, _near, best);
+	if (dx * dx >= best.distance) return;	//pitagoras
+	nearest_p(query, _far, best);
+}
+
+inline void kdTree::knearest(point_uv_tuple *query, node* currentNode, kNearest_queue& best) {
+	if (!currentNode) return;
+
+	int axis = currentNode->depth % DIMENSION;
+
+	float d = sumOfsquare(currentNode->point->first.x() - query->first.x(), currentNode->point->first.y() - query->first.y(), currentNode->point->first.z() - query->first.z());
 
 	if (d == 0.0f)	//megtaláltuk a pontunkat, mindkét gyerek irányba menni kell mert a pont rajta van a vágósíkon
 	{
@@ -401,7 +439,7 @@ void kdTree<Data>::knearest(Data *query, node* currentNode, kNearest_queue& best
 	}
 
 	//adott vágósíktól vett távolság
-	float dx = axis == 0 ? currentNode->point->x() - query->x() : axis == 1 ? currentNode->point->y() - query->y() : currentNode->point->z() - query->z();
+	float dx = axis == 0 ? currentNode->point->first.x() - query->first.x() : axis == 1 ? currentNode->point->first.y() - query->first.y() : currentNode->point->first.z() - query->first.z();
 
 	if (best.size() < kn || d <= best.top().first) {
 		best.push(DistanceTuple(d, currentNode));
@@ -432,11 +470,55 @@ void kdTree<Data>::knearest(Data *query, node* currentNode, kNearest_queue& best
 
 }
 
+inline void kdTree::knearest_p(Point *query, node* currentNode, kNearest_queue& best) {
+	if (!currentNode) return;
+
+	int axis = currentNode->depth % DIMENSION;
+
+	float d = sumOfsquare(currentNode->point->first.x() - query->x(), currentNode->point->first.y() - query->y(), currentNode->point->first.z() - query->z());
+
+	/*if (d == 0.0f)	//megtaláltuk a pontunkat, mindkét gyerek irányba menni kell mert a pont rajta van a vágósíkon
+	{
+		knearest(query, currentNode->left, best);
+		knearest(query, currentNode->right, best);
+		return;
+	}*/
+
+	//adott vágósíktól vett távolság
+	float dx = axis == 0 ? currentNode->point->first.x() - query->x() : axis == 1 ? currentNode->point->first.y() - query->y() : currentNode->point->first.z() - query->z();
+
+	if (best.size() < kn || d <= best.top().first) {
+		best.push(DistanceTuple(d, currentNode));
+		/*kNearest_queue tmp = best;
+		while (!tmp.empty())
+		{
+		qDebug() << tmp.top() << " ";
+		tmp.pop();
+		}
+		qDebug() << "\n";*/
+		if (best.size() > kn) {
+			best.pop();
+			/*tmp = best;
+			while (!tmp.empty())
+			{
+			qDebug() << tmp.top() << " ";
+			tmp.pop();
+			}
+			qDebug() << "\n";*/
+		}
+	}
+
+	node* _near = dx <= 0 ? currentNode->right : currentNode->left;
+	node* _far = dx <= 0 ? currentNode->left : currentNode->right;
+	knearest_p(query, _near, best);
+	if (dx * dx >= best.top().first) return;	//pitagoras
+	knearest_p(query, _far, best);
+}
+
 //---		-----		----
 //--------------------------
 
-template <typename Data>
-GLPaintFormat kdTree<Data>::drawNode(/*const unsigned int& bt*/)
+inline GLPaintFormat kdTree::drawNode(/*const unsigned int& bt*/)
 {
 	GLPaintFormat gpf;
 	//node* draw = bt == 0 ? _draw : bt == 1 ? _draw->nn.neighb : NULL;
@@ -444,7 +526,7 @@ GLPaintFormat kdTree<Data>::drawNode(/*const unsigned int& bt*/)
 
 	Box act_box = _draw->box;
 
-	gpf.points.push_back(Data(act_box.getXMin(), act_box.getYMin(), act_box.getZMin()));
+	/*gpf.points.push_back(Data(act_box.getXMin(), act_box.getYMin(), act_box.getZMin()));
 	gpf.points.push_back(Data(act_box.getXMax(), act_box.getYMin(), act_box.getZMin()));
 	gpf.points.push_back(Data(act_box.getXMin(), act_box.getYMax(), act_box.getZMin()));
 	gpf.points.push_back(Data(act_box.getXMax(), act_box.getYMax(), act_box.getZMin()));
@@ -476,15 +558,14 @@ GLPaintFormat kdTree<Data>::drawNode(/*const unsigned int& bt*/)
 	//gpf.ix.push_back(1);	gpf.ix.push_back(5);	gpf.ix.push_back(7);
 	
 	gpf.col.push_back(QVector3D(1, 0, 0));
-
+	*/
 	return gpf;
 }
 
 //---		-----		----
 //--------------------------
 
-template <typename Data>
-void kdTree<Data>::getActivePoints(std::vector<Data>& active_points, node* r = NULL)
+inline void kdTree::getActivePoints(std::vector<point_uv_tuple>& active_points, node* r)
 {
 	if (!r) r = root;
 	if (!r) return;
@@ -495,15 +576,13 @@ void kdTree<Data>::getActivePoints(std::vector<Data>& active_points, node* r = N
 	if (r->right) getActivePoints(active_points, r->right);
 }
 
-template <typename Data>
-void kdTree<Data>::changeThreadCapacity(const unsigned int& tc)
+inline void kdTree::changeThreadCapacity(const unsigned int& tc)
 {
 	t_schedular->setCloudThreadCapacity(tc);
 	stopBuildDepth = (unsigned int)log2(tc);
 }
 
-template <typename Data>
-void kdTree<Data>::getTimes(float& join, float& sort, float& all) const
+inline void kdTree::getTimes(float& join, float& sort, float& all) const
 {
 	//	std::cout << "Sorting time: " << time_sortMS << "\nJoin time: " << t_schedular->getJoinTime() << "\n";
 	join = t_schedular->getJoinTime();
@@ -511,17 +590,7 @@ void kdTree<Data>::getTimes(float& join, float& sort, float& all) const
 	all = calc_time.count();
 }
 
-//TODO: CHANGE IF NECESSARY - depends on remove from kdtree
-template <typename Data>
-unsigned int kdTree<Data>::getPointNumbFromBox() const
-{
-	return t;
-	return test;
-	return 0;
-}
-
-template <typename Data>
-void kdTree<Data>::inOrderPrint(node* r, const int& level)
+inline void kdTree::inOrderPrint(node* r, const int& level)
 {
 	if (r == NULL) return;
 	if (r->point == NULL)

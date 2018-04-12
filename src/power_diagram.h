@@ -9,7 +9,8 @@
 
 #include <CGAL/Regular_triangulation_3.h>
 #include <CGAL/Triangulation_vertex_base_with_info_3.h>
-//#include <CGAL/convex_hull_3.h>
+#include <CGAL/Triangulation_cell_base_with_info_3.h>
+
 #include <CGAL/Linear_algebraHd.h>
 
 typedef Kernel::Weighted_point_3                            weighted_point;
@@ -17,18 +18,17 @@ typedef Kernel::Weighted_point_3                            weighted_point;
 typedef CGAL::Regular_triangulation_vertex_base_3<Kernel>        regular_triangulation_vertex_base;
 typedef CGAL::Triangulation_vertex_base_with_info_3<std::vector<Point>, Kernel, regular_triangulation_vertex_base> regular_triangulation_vertex_base_with_info;
 typedef CGAL::Regular_triangulation_cell_base_3<Kernel>          regular_triangulation_cell_base;
+typedef CGAL::Triangulation_cell_base_with_info_3<cell_inf, Kernel, regular_triangulation_cell_base>  regular_triangulation_cell_base_with_info;
+
 typedef CGAL::Triangulation_data_structure_3<
 	regular_triangulation_vertex_base_with_info,
-	regular_triangulation_cell_base,
+	regular_triangulation_cell_base_with_info,
 	Concurrency_tag
 > regular_triangulation_data_structure;
 
 typedef CGAL::Regular_triangulation_3<Kernel, regular_triangulation_data_structure> regular_triangulation;
 
 typedef regular_triangulation::Cell_handle regular_cell_handle;
-
-typedef CGAL::Linear_algebraHd<float> l_algebra;
-typedef CGAL::Linear_algebraHd<float>::Matrix Matrix;
 
 class PolarBall
 {
@@ -96,185 +96,193 @@ class PowerCell
 {
 	
 public:
-	PowerCell(Point* pol_p, const float& r, const std::vector<Point>& sur_p) : polar_ball(PolarBall(Pole(pol_p, r), sur_p)) {
-		vertices_map.clear();
-		neighbour_candidates.clear();
-		proper_neighbours.clear();
-		indicies_of_cell_segments.clear();
+	PowerCell(Point* pol_p, const float& r, const std::vector<Point>& sur_p, const unsigned int& c_i) : polar_ball(PolarBall(Pole(pol_p, r), sur_p)), my_index(c_i){
+		cell_faces.clear();
 	}
 	~PowerCell() {
-		vertices_map.clear();
-		neighbour_candidates.clear();
-		proper_neighbours.clear();
-		indicies_of_cell_segments.clear();
-	}
-
-	void addPowerVertex(Point* p, const unsigned int& ind)
-	{
-		vertices_map.insert(std::pair<unsigned int, Point*>(ind, p));
-	}
-
-	void setSegmentIndicies(const std::set<std::pair<Point*, Point*>>& segments)
-	{
-		std::map<Point*, unsigned int> tmp_vert_index_pairs;
-		int index = 0;
-
-		for (auto& it : vertices_map)
-		{
-		//	power_vertices.push_back(it.second);
-			tmp_vert_index_pairs.insert(std::pair <Point*, unsigned int>(it.second, index));
-			index++;
-		}
-
-		indicies_of_cell_segments.clear();
-
-		for (auto it : segments)
-		{
-			Point* left = it.first;
-			Point* right = it.second;
-
-			auto left_pos = tmp_vert_index_pairs[left];
-			auto right_pos = tmp_vert_index_pairs[right];
-
-			indicies_of_cell_segments.push_back(left_pos);
-			indicies_of_cell_segments.push_back(right_pos);
-		}
-	}
-
-	std::vector<unsigned int> getSegmentIndicies() const {
-		return indicies_of_cell_segments;
+		cell_faces.clear();
 	}
 
 	GLPaintFormat getPaintData()
 	{
 		GLPaintFormat res;
 
-		for (auto& it : vertices_map)
-			res.points.push_back(*it.second);
+		std::map<Point*, unsigned int> points;
+		std::map<std::pair<unsigned int, unsigned int>, unsigned int> edge_ix;
+		int index = 0;
+		int edge_index = 0;
+		for (auto& it : cell_faces)
+		{
+			//qDebug() << it;
+			//qDebug() << "Face have : " << it->edges.size();
+			for (auto& edge : it->edges)
+			{
+				//qDebug() << "\t" <<  edge;
 
-		//res.ix = local_draw_indicies;
-		res.ix = indicies_of_cell_segments;
+				auto first_edge = edge->edge.first;
+				auto second_edge = edge->edge.second;
+
+				auto first_poi = points.insert(std::pair<Point*, unsigned int>(first_edge.second, index));
+				if (first_poi.second == true)
+				{
+					res.points.push_back(*first_edge.second);
+					index++;
+				}
+
+				auto second_poi = points.insert(std::pair<Point*, unsigned int>(second_edge.second, index));
+				if (second_poi.second == true)
+				{
+					res.points.push_back(*second_edge.second);
+					index++;
+				}
+
+				auto edge_n = edge_ix.insert(std::pair<std::pair<unsigned int, unsigned int>, unsigned int>(std::pair<unsigned int, unsigned int>(first_edge.first, second_edge.first), edge_index));
+				if (edge_n.second == true)
+				{
+					res.ix.push_back(first_poi.first->second);
+					res.ix.push_back(second_poi.first->second);
+					edge_index++;
+				}
+
+			}
+		}
+		qDebug() << "We got everything: " << res.points.size() << " - " << res.ix.size();
+
 		res.centers_with_radius.push_back(std::pair<Point, float>(polar_ball.getPoint(), polar_ball.getRadius()));
 		//res.surf_centers.push_back(polar_ball.getSurfPoint());
 
 		res.col.push_back(QVector3D(0, 0, 1));
 		res.center_part_lengths.push_back(res.centers_with_radius.size());
 
-	//	qDebug() << "Voronoi vertices: " << power_vertices.size() << "\n Indicies: " << local_draw_indicies.size() << "\n";
-	//	qDebug() << "\t 1 polar ball" << res.centers_with_radius.size() << "\n";
 		return res;
-	}
-
-	int getNeighbourIndex(const int& ind) const
-	{
-		if (proper_neighbours.empty() ||  ind < 0) return -1;
-		return proper_neighbours[ind % proper_neighbours.size()];
-	}
-	
-	void appendPaintDataAsNeighbour(GLPaintFormat& res, const unsigned int& related)
-	{
-	//	if (related < 0 || neighbour_candidates.size() <= related) return;
-
-		const size_t pre_size = res.points.size();
-		for (auto& it : vertices_map)
-			res.points.push_back(*it.second);
-
-		for (auto it : indicies_of_cell_segments)
-			res.ix.push_back(it + pre_size);
-
-		qDebug() << "Neighbour vertices: " << vertices_map.size() /*<< "\n Indicies: " << local_draw_indicies.size() */<< "\n";
-		for (auto it2 : neighbour_candidates[related])
-		{
-			qDebug() << it2 << ": " << qSetRealNumberPrecision(10) << vertices_map[it2]->x() <<", " << vertices_map[it2]->y() << ", " << vertices_map[it2]->z();
-			res.centers_with_radius.push_back(std::pair<Point, float>(*vertices_map[it2], 0.005f));
-		}
-		res.col.push_back(QVector3D(0, 0, 0));
-		res.center_part_lengths.push_back(neighbour_candidates[related].size());
 	}
 
 	Pole getPolePoint() const { return polar_ball.getPole(); }
 
-	std::vector<Point> getPoints()
-	{
-		std::vector<Point> tmp;
-		for (auto& it : vertices_map)
-			tmp.push_back(*it.second);
-		return tmp;
-	}
-
-	Point getPointFromMap(const unsigned int& ind)
-	{
-		return *vertices_map[ind];
-	}
-
-	Point* getPointByIndex(const unsigned int& ind)
-	{
-		if (ind >= vertices_map.size() || ind < 0)
-			return NULL;
-		return vertices_map[ind];
-	}
-
 	bool hasInnerPole() const { return polar_ball.isInnerPole(); }
 	PolarBall* getPolarBallPtr() { return &polar_ball; }
-	std::vector<unsigned int> getProperNeighbours() const { return proper_neighbours; }
 	std::vector<Point> getRelatedSurfPoints() const { return polar_ball.getSurfPoints(); }
 
-	size_t vert_size() { return vertices_map.size(); }
-
-	void printNeighbourCandidate()
+	void appendPaintDataAsNeighbour(GLPaintFormat& res, const unsigned int& related)
 	{
-		qDebug() << "NEIGHBOUR CANDIDATE\n";
-		for (auto it : neighbour_candidates)
+		//	if (related < 0 || neighbour_candidates.size() <= related) return;
+
+		const size_t pre_size = res.points.size();
+
+		std::map<Point*, unsigned int> points;
+		std::map<std::pair<unsigned int, unsigned int>, unsigned int> edge_ix;
+		int index = 0;
+		int edge_index = 0;
+		face_t* related_face;
+
+		for (auto& it : cell_faces)
 		{
-			qDebug() << "-----------------------" <<
-					 it.first << ":\n";
-			for (auto it2 : it.second)
-				qDebug() << "\t" << it2;
+			qDebug() << it;
+			qDebug() << "Face have : " << it->edges.size();
+			for (auto& edge : it->edges)
+			{
+				qDebug() << "\t" << edge;
 
+				auto first_edge = edge->edge.first;
+				auto second_edge = edge->edge.second;
+
+				auto first_poi = points.insert(std::pair<Point*, unsigned int>(first_edge.second, index));
+				if (first_poi.second == true)
+				{
+					res.points.push_back(*first_edge.second);
+					index++;
+				}
+
+				auto second_poi = points.insert(std::pair<Point*, unsigned int>(second_edge.second, index));
+				if (second_poi.second == true)
+				{
+					res.points.push_back(*second_edge.second);
+					index++;
+				}
+
+				auto edge_n = edge_ix.insert(std::pair<std::pair<unsigned int, unsigned int>, unsigned int>(std::pair<unsigned int, unsigned int>(first_edge.first, second_edge.first), edge_index));
+				if (edge_n.second == true)
+				{
+					res.ix.push_back(first_poi.first->second + pre_size);
+					res.ix.push_back(second_poi.first->second + pre_size);
+					edge_index++;
+				}
+
+			}
+
+			if (it->get_neighbour_cell(my_index) == related)
+				related_face = it;
 		}
-		qDebug() << "\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\n";
 
-	}
+		qDebug() << "Neighbour vertices: " << "\n";
 
-	void addNeighbourCandidate(const unsigned int& related_power_cell_index, const unsigned int& actual_power_vertex_index)
-	{
-		std::pair<std::map<unsigned int, std::set<unsigned int>>::iterator, bool> res;
-		res = neighbour_candidates.insert(std::pair< unsigned int, std::set<unsigned int> >(related_power_cell_index, std::set<unsigned int>()));
-		res.first->second.insert(actual_power_vertex_index);
-	}
-
-	std::set<unsigned int> getCommonNeighbourPoints(const unsigned int& neigh)
-	{
-		if (neigh < 0) return std::set<unsigned int>();
-
-		return neighbour_candidates[neigh];
-	}
-
-	void printProperNeightbours()
-	{
-		std::stringstream out;
-		out << "\t" << " My neighbours (" << proper_neighbours.size() << "): ";
-		for (auto it : proper_neighbours)
+		auto face_points = related_face->get_face_points();
+		for (auto& point : face_points)
 		{
-			out << " " << it;
+			qDebug() << "\t " << qSetRealNumberPrecision(10) << point->x() << ", " << point->y() << ", " << point->z();
+			res.centers_with_radius.push_back(std::pair<Point, float>(*point, 0.005f));
 		}
-		qDebug() << QString(out.str().c_str());
+
+		res.col.push_back(QVector3D(0, 0, 0));
+		res.center_part_lengths.push_back(face_points.size());
 	}
 
-	void calcProperNeighbours();
+	void add_face(face_t * face)
+	{
+		cell_faces.push_back(face);
+	}
+
+	std::vector<unsigned int> get_neighbours()
+	{
+		if (cell_faces.empty())	return std::vector<unsigned int>();
+
+		std::vector<unsigned int> my_neighbours;
+
+		for (auto& face : cell_faces)
+		{
+			int neigh_candidate = face->get_neighbour_cell(my_index);
+			if (neigh_candidate == -1 || neigh_candidate == -3) qDebug() << "ERR: BAD getting neighbours";
+			if (neigh_candidate < 0) continue;
+
+			my_neighbours.push_back(neigh_candidate);
+		}
+
+		return my_neighbours;
+	}
+
+	int get_neighbour(const int& face_id)
+	{
+		if (face_id < 0) return -1;	//important because of drawings
+
+		int correct_face_id = face_id % cell_faces.size();
+
+		return cell_faces[correct_face_id]->get_neighbour_cell(my_index);
+	}
+
+	face_t* get_common_face(const unsigned int& neighbour)
+	{
+		for (auto& face : cell_faces)
+		{
+			int neigh_candidate = face->get_neighbour_cell(my_index);
+			if (neigh_candidate == -1 || neigh_candidate == -3) qDebug() << "ERR: BAD neighbours";
+			if (neigh_candidate < 0) continue;
+
+			if (neigh_candidate == neighbour) return face;
+		}
+
+		return nullptr;
+	}
+
+	std::vector<face_t*> faces() const
+	{
+		return cell_faces;
+	}
 
 private:
 	PolarBall polar_ball;
 
-	std::map<unsigned int, Point*> vertices_map;	//power verticies with their indicies
-	std::map<unsigned int, std::set<unsigned int>> neighbour_candidates;
-			// global Power Cell index, related common global vertex index
-	std::vector<unsigned int> proper_neighbours;
-
-	//std::vector<Point*> power_vertices;		//local order, bcuse convex hull's verices order is different than in map!! - refactor if we can							
-	//std::vector<unsigned int> local_draw_indicies; 
-
-	std::vector<unsigned int> indicies_of_cell_segments; 
+	std::vector<face_t*> cell_faces;
+	unsigned int my_index;		//TODO: this is redundant
 };
 
 class PowerDiagram
@@ -293,23 +301,20 @@ public:
 	PowerDiagram() : bounded(Box(-1.0f, 1.0f))
 	{
 		cells.clear();
-		point_map.clear();
+		power_faces.clear();
+		power_edges.clear();
+		power_vertices.clear();
 		pole_map.clear();
 		regular_triangles.clear();
-		indicies_of_power_diagram_segments.clear();
-		inner_outer_related_cell_pairs.clear();
-		power_crust_indicies.clear();
-
 	}
 	~PowerDiagram() 
 	{
 		cells.clear();
-		point_map.clear();
+		power_edges.clear();
+		power_faces.clear();
+		power_vertices.clear();
 		pole_map.clear();
 		regular_triangles.clear();
-		indicies_of_power_diagram_segments.clear();
-		inner_outer_related_cell_pairs.clear();
-		power_crust_indicies.clear();
 	}
 
 	typedef std::vector<PowerCell>::iterator Power_cell_iterator;
@@ -325,31 +330,14 @@ public:
 
 	void clear() {
 		cells.clear();
-		point_map.clear();
 		pole_map.clear();
 		regular_triangles.clear();
-		indicies_of_power_diagram_segments.clear();
-		inner_outer_related_cell_pairs.clear();
-		power_crust_indicies.clear();
 	}
 
 	size_t size() const { return cells.size(); }
-	size_t size_of_points() const { return point_map.size(); }
 	void setBox(const Box& b) { bounded = b; }
 
-	std::vector<Point> getCellPoints(const int& ind) { return cells[ind].getPoints(); }
-
-	std::vector<Point> getAllPoints()
-	{
-		std::vector<Point> tmp;
-		for (auto it : point_map)
-			tmp.push_back(it.first);
-
-		return tmp;
-	}
-
 	GLPaintFormat getCellPaintData(const int& ind, const int& nid);
-	GLPaintFormat getAllPaintData();
 	GLPaintFormat getPowerDiagramBySegmentPaintData();
 	GLPaintFormat getInnerPolesPaintData();
 	GLPaintFormat getOuterPolesPaintData();
@@ -357,71 +345,44 @@ public:
 	GLPaintFormat getInnerOuterPairsPaintData();
 	GLPaintFormat getPowerCrustPaintData();
 	GLPaintFormat getPowerShapePaintData();
+	GLPaintFormat get_triangled_mesh_without_texture();
 
 	//------------------------------------------
 	//surf pontok a polejaikkal
 	void calc_diagram(const std::vector<std::pair<Pole, Point> >& weighted_points);
 	void label_poles();
-	void calc_medial_axis()
-	{
-		if (inner_outer_related_cell_pairs.size() == 0) 
-			calc_inner_outer_pairs();
-
-		qDebug() << "Medial axis calculation";
-		//medial_axis_point_map.clear();
-		//unsigned int medial_axis_p_index = 0;
-
-	
-		//qDebug() << "We have " << medial_axis_point_map.size() << " medial axis points";
-	}
+	void calc_power_crust();
 
 protected:
-	Point getBoundedDual(Point& dual);
+	typedef std::pair<Point*, unsigned int> point_identifier;
+	typedef std::pair<edge_tt*, std::set<unsigned int>> edge_identifier;
+	typedef std::pair<int, int> neighbour;
+
 	void addBoxPoints(const Box& box, std::set<Point>& box_points, std::vector<std::pair<weighted_point, std::vector<Point>>>& points);
 	Box UpdateBox(const std::vector<std::pair<Pole, Point> >& weighted_points);
 
-	void setDiagramIndicies(std::set<std::pair<Point*, Point*>> power_diagram_segments)
-	{
-		std::map<Point*, unsigned int> tmp_vertex_order; //TODO: rework with the private one
-		int index = 0;
-		for (auto& it : point_map)
-		{
-			tmp_vertex_order.insert(std::pair<Point*, unsigned int>(const_cast<Point*>(&it.first), index));
-			index++;
-		}
+	std::pair<edge_tt, edge_identifier> add_edge_as_power_edge(const edge_tt&, std::map<edge_tt, edge_identifier>&);
+	void update_neighbour_map(std::map<neighbour, std::set<edge_tt*>>&, edge_identifier&, const int&);
 
-		for (auto it : power_diagram_segments)
-		{
-			auto left = tmp_vertex_order[it.first];
-			auto right = tmp_vertex_order[it.second];
-
-			indicies_of_power_diagram_segments.push_back(left);
-			indicies_of_power_diagram_segments.push_back(right);
-		}
-	}
-
-	void calc_inner_outer_pairs();
-	void calc_power_crust();
+	void set_cell_info(const regular_triangulation& r, regular_cell_handle& cell, unsigned int& pow_index);
+	void correct_unoriented_power_crust_faces(std::vector<face_t*>& unoriented_face_ptrs);
 
 private:
-	typedef std::pair<unsigned int, std::set<unsigned int>> Vertex_PowerCell_Ids;
-						// global vertex index ; related Power Cell index
+	typedef typename _vertex::v_ptr v_ptr;
+	typedef typename face_tt::f_ptr f_ptr;
+
 	std::vector<PowerCell> cells;
-	std::map<Point, Vertex_PowerCell_Ids> point_map;	//Power verticies with index and related Power Cell indicies
+
+	std::vector<v_ptr> power_vertices;
+	std::set<edge_tt> power_edges;
+	std::vector<f_ptr> power_faces;
+
 	std::map<Point, unsigned int> pole_map;				//Pole verticies with index
 	
 	std::set<triple<unsigned int>> regular_triangles;
-
-	std::vector<unsigned int> indicies_of_power_diagram_segments;
-	std::set<std::pair<unsigned int, unsigned int >> inner_outer_related_cell_pairs;
-	std::vector<unsigned int> power_crust_indicies;
 	//-----------------------
 	
 	Box bounded;
-
-//	std::map<Point, unsigned int> medial_axis_point_map;
-//	std::vector<unsigned int> medial_axis_segment_indicies;
-
 };
 
 

@@ -6,6 +6,7 @@
 #include <CGAL/Triangle_3.h>
 #include <CGAL/Segment_3.h>
 #include <QVector3D>
+#include <QDebug>
 
 #ifdef ENABLE_CGAL_SURFACE
 #include <CGAL/property_map.h>
@@ -44,10 +45,38 @@ typedef CGAL::Parallel_tag Concurrency_tag;
 typedef CGAL::Sequential_tag Concurrency_tag;
 #endif
 
-struct Color
+template<typename T>
+struct triple
 {
-	int r, b, g, a;
+	triple(const unsigned int& f, const unsigned int& s, const unsigned int& t) : first(f), second(s), third(t) {}
+
+	T first, second, third;
+
+	template<typename T>
+	bool operator < (const triple<T>& t) const
+	{
+		return (first < t.first) || (first == t.first && second < t.second) || (first == t.first && second == t.second && third < t.third);
+	}
+
+	template<typename T>
+	bool operator <= (const triple<T>& t) const
+	{
+		return (first <= t.first) || (first == t.first && second <= t.second) || (first == t.first && second == t.second && third <= t.third);
+	}
 };
+
+typedef std::pair<uint16_t, triple<uint16_t>> RGB;
+typedef std::pair<int16_t, std::pair<float, float>> UV;
+
+typedef std::vector<RGB> rbg_map;
+typedef std::vector<UV> uv_map;
+
+typedef std::pair<Point, rbg_map> point_rbg_tuple;
+typedef std::vector<point_rbg_tuple> point_rbg_map;
+typedef std::pair<Point, uv_map> point_uv_tuple;
+typedef std::vector<point_uv_tuple> point_uv_map;
+
+typedef CGAL::First_of_pair_property_map<point_uv_tuple>  filter_point_map;
 
 struct GLPaintFormat
 {
@@ -58,6 +87,7 @@ struct GLPaintFormat
 	std::vector<std::pair<Point, float>> centers_with_radius;
 	std::vector<unsigned int> center_part_lengths;
 	std::vector<unsigned int> point_part_lengths;
+	std::vector<std::pair<float, float>> uv_coords;
 
 	GLPaintFormat() {}
 	GLPaintFormat(const std::vector<Point>& _p) :
@@ -74,18 +104,70 @@ struct GLPaintFormat
 namespace CGALTool
 {
 	struct XYZOrder {
-		bool operator()(const Point& c, const Point& _c) {
-			return c.x() < _c.x() || (c.x() == _c.x() && c.y() < _c.y()) || (c.x() == _c.x() && c.y() == _c.y() && c.z() < _c.z());
+		bool operator()(const point_uv_tuple& c, const point_uv_tuple& _c) {
+			return c.first.x() < _c.first.x() || (c.first.x() == _c.first.x() && c.first.y() < _c.first.y()) || (c.first.x() == _c.first.x() && c.first.y() == _c.first.y() && c.first.z() < _c.first.z());
 		}
 	};
 	struct YZXOrder {
-		bool operator()(const Point& c, const Point& _c) {
-			return c.y() < _c.y() || (c.y() == _c.y() && c.z() < _c.z()) || (c.y() == _c.y() && c.z() == _c.z() && c.x() < _c.x());
+		bool operator()(const point_uv_tuple& c, const point_uv_tuple& _c) {
+			return c.first.y() < _c.first.y() || (c.first.y() == _c.first.y() && c.first.z() < _c.first.z()) || (c.first.y() == _c.first.y() && c.first.z() == _c.first.z() && c.first.x() < _c.first.x());
 		}
 	};
 	struct ZXYOrder {
-		bool operator()(const Point& c, const Point& _c) {
-			return c.z() < _c.z() || (c.z() == _c.z() && c.x() < _c.x()) || (c.z() == _c.z() && c.x() == _c.x() && c.y() < _c.y());
+		bool operator()(const point_uv_tuple& c, const point_uv_tuple& _c) {
+			return c.first.z() < _c.first.z() || (c.first.z() == _c.first.z() && c.first.x() < _c.first.x()) || (c.first.z() == _c.first.z() && c.first.x() == _c.first.x() && c.first.y() < _c.first.y());
 		}
 	};
 };
+
+inline std::ostream& operator << (std::ostream& out, const Point& p)
+{
+	out << p.x() << ", " << p.y() << ", " << p.z();
+	return out;
+}
+
+inline std::ostream& operator << (std::ostream& out, const point_uv_tuple& puv_m)
+{
+	out << puv_m.first << " : ";
+	for (auto & tup : puv_m.second)
+	{
+		out << tup.first << " [ " << tup.second.first << ", " << tup.second.second << " ] ,";
+	}
+	return out;
+}
+
+inline QDebug operator << (QDebug& out, const Point& p)
+{
+	out << p.x() << ", " << p.y() << ", " << p.z();
+	return out;
+}
+
+inline std::pair<float, float>& operator * (std::pair<float, float>& lhs, float& rhs)
+{
+	lhs = std::pair<float, float>(lhs.first * rhs, lhs.second * rhs);
+	return lhs;
+}
+
+inline std::pair<float, float>& operator + (std::pair<float, float>& lhs, std::pair<float, float>& rhs)
+{
+	lhs = std::pair<float, float>(lhs.first + rhs.first, lhs.second + rhs.second);
+	return lhs;
+}
+
+inline std::pair<float, float>& operator / (std::pair<float, float>& lhs, std::pair<float, float>& rhs)
+{
+	lhs = std::pair<float, float>(lhs.first / rhs.first, lhs.second / rhs.second);
+	return lhs;
+}
+
+inline Point& operator +(const Point& lhs, const Point& rhs)
+{
+	Point res = Point(lhs.x() + rhs.x(), lhs.y() + rhs.y(), lhs.z() + rhs.z());
+	return res;
+}
+
+inline Point& operator / (Point& lhs, const float& rhs)
+{
+	lhs = Point(lhs.x() / rhs, lhs.y() / rhs, lhs.z() / rhs);
+	return lhs;
+}

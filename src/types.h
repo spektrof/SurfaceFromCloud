@@ -1,6 +1,8 @@
 #pragma once
 
 #include <iostream>
+#include <vector>
+#include <map>
 #include <boost\chrono.hpp>
 
 enum ProcessReturns
@@ -42,26 +44,6 @@ enum PowerCrustDrawPossibilites
 	INNER_OUTER_POLES,
 	MEDIAL_AXIS,
 	POWER_SHAPE
-};
-
-template<typename T>
-struct triple
-{
-	triple(const unsigned int& f, const unsigned int& s, const unsigned int& t) : first(f), second(s), third(t) {}
-
-	T first, second, third;
-
-	template<typename T>
-	bool operator < (const triple<T>& t) const
-	{
-		return (first < t.first) || (first == t.first && second < t.second) || (first == t.first && second == t.second && third < t.third);
-	}
-
-	template<typename T>
-	bool operator <= (const triple<T>& t) const
-	{
-		return (first <= t.first) || (first == t.first && second <= t.second) || (first == t.first && second == t.second && third <= t.third);
-	}
 };
 
 static float sumOfsquare(const float& x, const float& y, const float& z)

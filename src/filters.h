@@ -91,7 +91,8 @@ public:
 
 		for (size_t it = 0; it < points.size(); ++it)
 		{
-			float s_d = points[it].x()*n.x() + points[it].y()*n.y() + points[it].z()*n.z() - md;
+			auto poi = points[it].first;
+			float s_d = poi.x()*n.x() + poi.y()*n.y() + poi.z()*n.z() - md;
 			if (s_d < 0) del_pos.push_back(it);
 		}
 		//qDebug() << md << " , " << p.x() << "-" << p.y() << "-" << p.z() << " " << n.x() << "-" << n.y() << "-" << n.z() << " " << del_pos.size();
@@ -129,7 +130,7 @@ public:
 		//FIRST: I dont know the ratio
 		std::vector<T>::iterator first_to_remove
 			= CGAL::remove_outliers(points.begin(), points.end(),
-				CGAL::Identity_property_map<T>(),
+				filter_point_map(),
 				nb_neighbors,
 				100.,                  // No limit on the number of outliers to remove
 				outlier_limit * average_spacing); // Point with distance above 2*average_spacing are considered outliers
@@ -185,10 +186,10 @@ public:
 	void filter_process(std::vector<T>& points)	override	//if we use mine kd tree then this is not relevant
 	{
 		qDebug() << "GridSimplification process with " << cell_size;
-		points.erase(CGAL::grid_simplify_point_set(points.begin(), points.end(), cell_size),
-			points.end());
+		points.erase(CGAL::grid_simplify_point_set(points.begin(), points.end(), filter_point_map(), cell_size),
+			         points.end());
 		
-		std::vector<Point>(points).swap(points);
+		std::vector<T>(points).swap(points);
 	}
 
 	void SetFirstProperty(const double& first) { cell_size = first; }
@@ -208,12 +209,12 @@ public:
 	{
 		qDebug() << "HiearchySimplification process with " << max_cluster_size <<" " <<  max_surface_variation;
 
-		points.erase(CGAL::hierarchy_simplify_point_set(points.begin(), points.end(),
+		points.erase(CGAL::hierarchy_simplify_point_set(points.begin(), points.end(), filter_point_map(), 
 			max_cluster_size, 
 			max_surface_variation), 
 			points.end());
 
-		std::vector<Point>(points).swap(points);
+		std::vector<T>(points).swap(points);
 	}
 
 	void SetFirstProperty(const double& mcs) { max_cluster_size = mcs; }
@@ -242,11 +243,14 @@ public:
 			(points.begin(),
 				points.end(),
 				std::back_inserter(output),
+				filter_point_map(),
 				retain_percentage,
-				neighbor_radius
+				neighbor_radius,
+				35U, false
 				);
 
-		std::vector<Point>(output).swap(points);
+		//std::vector<T>(output).swap(points);
+		//TODO: we lost the uvs...
 	}
 
 	void SetFirstProperty(const double& rp) { retain_percentage = rp; }
@@ -276,7 +280,7 @@ public:
 	{
 		qDebug() << "JetSmoothing process with " << nb_neighbors;
 
-		CGAL::jet_smooth_point_set<Concurrency_tag>(points.begin(), points.end(), nb_neighbors);
+		CGAL::jet_smooth_point_set<Concurrency_tag>(points.begin(), points.end(), filter_point_map(), nb_neighbors);
 	}
 
 	void SetFirstProperty(const double& first) { nb_neighbors = first; }

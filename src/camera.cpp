@@ -7,8 +7,8 @@
 Camera::Camera(void) : m_eye(0.0f, -20.0f, 20.0f), m_at(0.0f, 0.0f, 0.0f), m_up(0.0f, 1.0f, 0.0f), m_speed(16.0f), m_goFw(0), m_goRight(0), m_slow(false)
 {
 	ortho_rect = QVector4D(-15.0f, 15.0f, 15.0f, -15.0f);
-	nearPlane = -55.0f;
-	farPlane = 2000.0f;
+	nearPlane = -505.0f;
+	farPlane = 8000.0f;
 
 	dir = 1;
 	dir_up = 1;

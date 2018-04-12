@@ -68,7 +68,9 @@ void GraphicInterface::setupSignals()
 	//connect(ui.knearest, SIGNAL(clicked()), this, SLOT(showKNearest()));
 
 	connect(ui.left_child, &QPushButton::clicked, this, [this]() { this->ui.glrender->goNode(1); });
-	connect(ui.right_child, &QPushButton::clicked, this, [this]() { this->ui.glrender->goNode(2); });
+//	connect(ui.right_child, &QPushButton::clicked, this, [this]() { this->ui.glrender->goNode(2); });
+	connect(ui.right_child, &QPushButton::clicked, this, [this]() { this->ui.glrender->export_to_obj(); });
+	
 	connect(ui.parent, &QPushButton::clicked, this, [this]() { this->ui.glrender->goNode(0); });
 	connect(ui.parent, &QPushButton::clicked, this, [this]() { this->ui.glrender->nextCell(); });
 

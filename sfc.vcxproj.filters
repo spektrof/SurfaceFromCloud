@@ -95,6 +95,12 @@
     <ClCompile Include="src\comments.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="diagram_types.cpp">
+      <Filter>CloudPlugins\SurfaceGenerator\PowerCrust</Filter>
+    </ClCompile>
+    <ClCompile Include="src\power_diagram_paint.cpp">
+      <Filter>CloudPlugins\SurfaceGenerator\PowerCrust</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\graphicinterface.h">

@@ -13,7 +13,7 @@ GLRender::GLRender(QWidget *parent)
 	xRot(0), yRot(0), zRot(0),
 	counter(0),
 	sfg(SurfaceGenerator()),
-	base(0), sphere(0)
+	p_base(0), pc_base(0), pt_base(0), sphere(0)
 {
 	memset(textures, 0, sizeof(textures));
 	elementbuffer = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
@@ -23,19 +23,36 @@ GLRender::GLRender(QWidget *parent)
 	sphere_indicies = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
 
 	setFocusPolicy(Qt::StrongFocus);
+
+	memset(kinect_textures, 0, sizeof(kinect_textures));
+	k_ind = 0;
 }
 
 GLRender::~GLRender()
 {
 	makeCurrent();
-	vbo.destroy();
+	sphere_vbo.destroy();
 	cloud_vbo.destroy();
 
 	for (int i = 0; i < 6; ++i)
 		delete textures[i];
-	delete base;
+
+	delete p_base;
+	delete pt_base;
+	delete pc_base;
 	delete sphere;
 	doneCurrent();
+}
+
+void GLRender::load_texture(std::vector<std::string>& file_list)
+{
+	const char* colorf[4] = { "images/red.png","images/green.png","images/purple.png","images/blue.png" };
+	for (int j = 0; j < file_list.size(); ++j)
+	{
+	//	qDebug() << file_list[j].c_str();
+		kinect_textures[j] = new QOpenGLTexture(QImage(QString(file_list[j].c_str())));
+		//kinect_textures[j] = new QOpenGLTexture(QImage(QString(colorf[j])));
+	}
 }
 
 void GLRender::qNormalizeAngle(int &angle)
@@ -72,6 +89,7 @@ void GLRender::initializeGL()
 	makeObjectFromCloud();	//CHECK THIS TODO
 	makeSphereRaycastObject();
 	makeSphereObject();
+	load_texture(sfg.get_file_name_list());
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
@@ -84,8 +102,72 @@ void GLRender::initializeGL()
 
 void GLRender::initBaseShaders()
 {
-	QOpenGLShader *vshader = new QOpenGLShader(QOpenGLShader::Vertex, this);
-	const char *vsrc =
+	/**************************
+	*	Point with uniform col *
+	**************************/
+	QOpenGLShader *p_vshader = new QOpenGLShader(QOpenGLShader::Vertex, this);
+	const char *p_vsrc =
+		"attribute highp vec4 vertex;\n"
+		"uniform mediump mat4 matrix;\n"
+		"void main(void)\n"
+		"{\n"
+		"    gl_Position = matrix * vertex;\n"
+		"}\n";
+	p_vshader->compileSourceCode(p_vsrc);
+
+	QOpenGLShader *p_fshader = new QOpenGLShader(QOpenGLShader::Fragment, this);
+	const char *p_fsrc =
+		"uniform vec3 color = vec3(1,0,0);"
+		"void main(void)\n"
+		"{\n"
+		"    gl_FragColor = vec4(color,0.5);\n"
+		"}\n";
+	p_fshader->compileSourceCode(p_fsrc);
+
+	p_base = new QOpenGLShaderProgram;
+	p_base->addShader(p_vshader);
+	p_base->addShader(p_fshader);
+	p_base->bindAttributeLocation("vertex", PROGRAM_VERTEX_ATTRIBUTE);
+	p_base->link();
+
+	/**************************
+	*	Point, color pairs*
+	**************************/
+	QOpenGLShader *pc_vshader = new QOpenGLShader(QOpenGLShader::Vertex, this);
+	const char *pc_vsrc =
+		"attribute highp vec4 vertex;\n"
+		"attribute mediump vec3 vertex_color;\n"
+		"varying mediump vec3 color;\n"
+		"uniform mediump mat4 matrix;\n"
+		"void main(void)\n"
+		"{\n"
+		"    gl_Position = matrix * vertex;\n"
+		"    color = vertex_color;\n"
+		"}\n";
+	pc_vshader->compileSourceCode(pc_vsrc);
+
+	QOpenGLShader *pc_fshader = new QOpenGLShader(QOpenGLShader::Fragment, this);
+	const char *pc_fsrc =
+		"varying mediump vec3 color;\n"
+		"void main(void)\n"
+		"{\n"
+		"    gl_FragColor = vec4(color,0.5);\n"
+		"}\n";
+	pc_fshader->compileSourceCode(pc_fsrc);
+
+	pc_base = new QOpenGLShaderProgram;
+	pc_base->addShader(pc_vshader);
+	pc_base->addShader(pc_fshader);
+	pc_base->bindAttributeLocation("vertex", PROGRAM_VERTEX_ATTRIBUTE);
+	pc_base->bindAttributeLocation("vertex_color", PROGRAM_COLOR_ATTRIBUTE);
+	pc_base->link();
+
+	/**************************
+	*	Point texture coord pair*
+	**************************/
+
+	QOpenGLShader *pt_vshader = new QOpenGLShader(QOpenGLShader::Vertex, this);
+	const char *pt_vsrc =
 		"attribute highp vec4 vertex;\n"
 		"attribute mediump vec4 texCoord;\n"
 		"varying mediump vec4 texc;\n"
@@ -95,25 +177,25 @@ void GLRender::initBaseShaders()
 		"    gl_Position = matrix * vertex;\n"
 		"    texc = texCoord;\n"
 		"}\n";
-	vshader->compileSourceCode(vsrc);
+	pt_vshader->compileSourceCode(pt_vsrc);
 
-	QOpenGLShader *fshader = new QOpenGLShader(QOpenGLShader::Fragment, this);
-	const char *fsrc =
+	QOpenGLShader *pt_fshader = new QOpenGLShader(QOpenGLShader::Fragment, this);
+	const char *pt_fsrc =
 		"uniform sampler2D texture;\n"
 		"varying mediump vec4 texc;\n"
 		"uniform vec3 color = vec3(1,0,0);"
 		"void main(void)\n"
 		"{\n"
-		"    gl_FragColor = vec4(color,0.5) /*texture2D(texture, texc.st)*/;\n"
+		"    gl_FragColor = texture2D(texture, texc.st);\n"
 		"}\n";
-	fshader->compileSourceCode(fsrc);
+	pt_fshader->compileSourceCode(pt_fsrc);
 
-	base = new QOpenGLShaderProgram;
-	base->addShader(vshader);
-	base->addShader(fshader);
-	base->bindAttributeLocation("vertex", PROGRAM_VERTEX_ATTRIBUTE);
-	base->bindAttributeLocation("texCoord", PROGRAM_TEXCOORD_ATTRIBUTE);
-	base->link();
+	pt_base = new QOpenGLShaderProgram;
+	pt_base->addShader(pt_vshader);
+	pt_base->addShader(pt_fshader);
+	pt_base->bindAttributeLocation("vertex", PROGRAM_VERTEX_ATTRIBUTE);
+	pt_base->bindAttributeLocation("texCoord", PROGRAM_TEXCOORD_ATTRIBUTE);
+	pt_base->link();
 }
 
 void GLRender::initSphereShaders()
@@ -214,10 +296,6 @@ void GLRender::makeObject()
 			vertData.append(j == 0 || j == 1);
 		}
 	}
-
-	vbo.create();
-	vbo.bind();
-	vbo.allocate(vertData.constData(), vertData.count() * sizeof(GLfloat));
 }
 
 QVector3D GLRender::GetUV(float u, float v)
@@ -256,18 +334,12 @@ void GLRender::makeSphereObject()
 	for (int i = 0; i<N; ++i)
 		for (int j = 0; j<N; ++j)
 		{
-			/*indices[6 * i + j * 3 * 2 * (N)+0] = (i)+(j)*	(N + 1);
-			indices[6 * i + j * 3 * 2 * (N)+1] =   (i + 1) + (j)*	(N + 1);
-			indices[6 * i + j * 3 * 2 * (N)+2] =   (i)+(j + 1)*(N + 1);
-			indices[6 * i + j * 3 * 2 * (N)+3] =   (i + 1) + (j)*	(N + 1);
-			indices[6 * i + j * 3 * 2 * (N)+4] =   (i + 1) + (j + 1)*(N + 1);
-			indices[6 * i + j * 3 * 2 * (N)+5] =   (i)+(j + 1)*(N + 1);*/
-			indicies.push_back( (i)+(j)*	(N + 1)	   );
-			indicies.push_back( (i + 1) + (j)*	(N + 1)  );
-			indicies.push_back( (i)+(j + 1)*(N + 1)   );
-			indicies.push_back( (i + 1) + (j)*	(N + 1)  );
-			indicies.push_back( (i + 1) + (j + 1)*(N + 1) );
-			indicies.push_back( (i)+(j + 1)*(N + 1)	   );
+			indicies.push_back(  i +       j *      (N + 1) );
+			indicies.push_back( (i + 1) +  j *      (N + 1) );
+			indicies.push_back(  i +      (j + 1) * (N + 1) );
+			indicies.push_back( (i + 1) +  j *      (N + 1) );
+			indicies.push_back( (i + 1) + (j + 1) * (N + 1) );
+			indicies.push_back(  i +      (j + 1) * (N + 1)	);
 
 		}
 
@@ -383,7 +455,6 @@ void GLRender::makeObjectFromCloud()
 		case POINTSS:
 		{
 			if (cloud_vbo.isCreated()) cloud_vbo.release();
-
 			QVector<GLfloat> vertData;
 			for (auto it : paintData.points)
 			{
@@ -437,17 +508,18 @@ void GLRender::makeObjectFromCloud()
 			if (elementbuffer.isCreated()) elementbuffer.release();
 
 			QVector<GLfloat> boxData;
-			for (auto it : paintData.points)
+			for (size_t it = 0; it < paintData.points.size(); ++it)
 			{
 				// vertex position
-				boxData.append(it.x());
-				boxData.append(it.y());
-				boxData.append(it.z());
+				boxData.append(paintData.points[it].x());
+				boxData.append(paintData.points[it].y());
+				boxData.append(paintData.points[it].z());
 				// texture coordinate
-				boxData.append(0);
-				boxData.append(1);
-				//TODO
+				boxData.append(paintData.points_col[it].x());
+				boxData.append(paintData.points_col[it].y());
+				boxData.append(paintData.points_col[it].z());
 			}
+
 			cloud_vbo.create();
 			cloud_vbo.bind();
 			cloud_vbo.allocate(boxData.constData(), boxData.count() * sizeof(GLfloat));
@@ -474,8 +546,49 @@ void GLRender::makeObjectOfPowerCrustPart(GLPaintFormat& paintData)
 	switch (sfg.getPowerCrustDrawObject())
 	{
 		case	    RESULT								   :
-			//mesh
+		{
+			if (cloud_vbo.isCreated()) cloud_vbo.release();
+			if (elementbuffer.isCreated()) elementbuffer.release();
+
+			QVector<GLfloat> boxData;
+
+			bool contain_uv = paintData.points_col.empty();
+			for (size_t it = 0; it < paintData.points.size(); ++it)
+			{
+				// vertex position
+				boxData.append(paintData.points[it].x());
+				boxData.append(paintData.points[it].y());
+				boxData.append(paintData.points[it].z());
+				// texture coordinate
+				if (contain_uv)
+				{
+					boxData.append(paintData.uv_coords[it].first);
+					boxData.append(paintData.uv_coords[it].second);
+				}
+				else
+				{
+					boxData.append(paintData.points_col[it].x());
+					boxData.append(paintData.points_col[it].y());
+					boxData.append(paintData.points_col[it].z());
+				}
+			}
+
+			cloud_vbo.create();
+			cloud_vbo.bind();
+			cloud_vbo.allocate(boxData.constData(), boxData.count() * sizeof(GLfloat));
+			cloud_vbo.release();
+			//-------------
+
+			elementbuffer.create();
+			elementbuffer.bind();
+			elementbuffer.allocate(&paintData.ix[0], paintData.ix.size() * sizeof(GLuint));
+			elementbuffer.release();
+
+			points_colors = paintData.points_col;
+			point_draw_parts = paintData.point_part_lengths;
+
 			return;
+		}
 		case		DELAUNEY							   :
 		case		VORONOI_DIAGRAM						   :
 		case		POWER_DIAGRAM						   :
@@ -860,8 +973,17 @@ void GLRender::shaderBinding(QOpenGLShaderProgram* shader, std::vector<Additiona
 	{
 		switch(it)
 		{
+		case COLOR:
+		{
+			shader->setAttributeBuffer(PROGRAM_VERTEX_ATTRIBUTE, GL_FLOAT, 0, 3, 6 * sizeof(GLfloat));
+			shader->enableAttributeArray(PROGRAM_COLOR_ATTRIBUTE);
+			shader->setAttributeBuffer(PROGRAM_COLOR_ATTRIBUTE, GL_FLOAT, 3 * sizeof(GLfloat), 3, 6 * sizeof(GLfloat));
+			return;
+		}
 		case TEXTURE:
 		{
+			kinect_textures[k_ind]->bind();
+		//	qDebug() << k_ind;
 			shader->setAttributeBuffer(PROGRAM_VERTEX_ATTRIBUTE, GL_FLOAT, 0, 3, 5 * sizeof(GLfloat));
 			shader->enableAttributeArray(PROGRAM_TEXCOORD_ATTRIBUTE);
 			shader->setAttributeBuffer(PROGRAM_TEXCOORD_ATTRIBUTE, GL_FLOAT, 3 * sizeof(GLfloat), 2, 5 * sizeof(GLfloat));
@@ -895,15 +1017,15 @@ void GLRender::renderObject(const QMatrix4x4& mvp, const QMatrix4x4& m)
 
 			cloud_vbo.bind();
 		//	qDebug() << cloud_vbo.size() / sizeof(GLfloat) / 3 << " point drawing" << "\n";
-			shaderBinding(base, std::vector<AdditionalBind>(), mvp);
-			base->setUniformValue("color", colors[0]);
+			shaderBinding(p_base, std::vector<AdditionalBind>(), mvp);
+			p_base->setUniformValue("color", colors[0]);
 
 			glDisable(GL_BLEND);
 			glDepthMask(GL_TRUE);
 
 			glDrawArrays(GL_POINTS, 0, cloud_vbo.size() / sizeof(GLfloat));
 			cloud_vbo.release();
-			base->release();
+			p_base->release();
 			return;
 		}
 		case BOX:
@@ -931,8 +1053,8 @@ void GLRender::renderObject(const QMatrix4x4& mvp, const QMatrix4x4& m)
 		//	qDebug() << elementbuffer.size() / sizeof(GLfloat) << " surface indicies drawing" << "\n";
 
 			std::vector<AdditionalBind> attr;
-			attr.push_back(TEXTURE);
-			shaderBinding(base, attr, mvp);
+			attr.push_back(COLOR);
+			shaderBinding(pc_base, attr, mvp);
 
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			glEnable(GL_BLEND);
@@ -947,7 +1069,7 @@ void GLRender::renderObject(const QMatrix4x4& mvp, const QMatrix4x4& m)
 
 			elementbuffer.release();
 			cloud_vbo.release();
-			base->release();
+			p_base->release();
 			return;
 		}
 		case ALGORITHM:
@@ -962,7 +1084,7 @@ void GLRender::renderObject(const QMatrix4x4& mvp, const QMatrix4x4& m)
 			sphere_vbo.bind();
 			sphere_indicies.bind();
 			qDebug() << sphere_indicies.size() / sizeof(GLfloat) << " sphere drawing" << "\n";
-			shaderBinding(base, std::vector<AdditionalBind>(), mvp);
+			shaderBinding(p_base, std::vector<AdditionalBind>(), mvp);
 
 			glDisable(GL_BLEND);
 			glDepthMask(GL_FALSE);
@@ -977,7 +1099,7 @@ void GLRender::renderObject(const QMatrix4x4& mvp, const QMatrix4x4& m)
 			sphere_indicies.release();
 			sphere_vbo.release();
 
-			base->release();
+			p_base->release();
 
 			return;
 		}
@@ -996,16 +1118,20 @@ void GLRender::renderObject(const QMatrix4x4& mvp, const QMatrix4x4& m)
 	}
 }
 
-void GLRender::DrawCells(QOpenGLBuffer& point_buffer, QOpenGLBuffer& index_buffer, const QMatrix4x4& mvp, QVector3D& col, bool transparent)
+void GLRender::DrawCells(QOpenGLShaderProgram* shader, QOpenGLBuffer& point_buffer, QOpenGLBuffer& index_buffer, const int& starter_index, const int& last_index, const QMatrix4x4& mvp, QVector3D& col, bool transparent)
 {
 	if (!elementbuffer.isCreated()) return;
 
 	cloud_vbo.bind();
 	elementbuffer.bind();
 //	qDebug() << elementbuffer.size() / sizeof(GLfloat) << " cell drawing" << "\n";
+//	qDebug() << "start : " << starter_index << " " << last_index;
+	std::vector<AdditionalBind> binds;
+	if (shader == pc_base) binds.push_back(COLOR);
+	if (shader == pt_base) binds.push_back(TEXTURE);
 
-	shaderBinding(base, std::vector<AdditionalBind>(), mvp);
-	base->setUniformValue("color", col);
+	shaderBinding(shader, binds, mvp);
+	if (shader == p_base) shader->setUniformValue("color", col);
 
 	if (transparent)
 	{
@@ -1021,24 +1147,28 @@ void GLRender::DrawCells(QOpenGLBuffer& point_buffer, QOpenGLBuffer& index_buffe
 
 	glDrawElements(
 		GL_TRIANGLES,      // mode
-		elementbuffer.size() / sizeof(GLfloat),    // count
+		last_index,    // count
 		GL_UNSIGNED_INT,   // type
-		(void*)0           // element array buffer offset
+		(void*)(starter_index*sizeof(unsigned int))           // element array buffer offset
 	);
 
 	elementbuffer.release();
 	cloud_vbo.release();
-	base->release();
+	shader->release();
 }
 
-void GLRender::DrawSphere(QOpenGLBuffer& sphere_vbo, QOpenGLBuffer& sphere_indicies, const QMatrix4x4& mvp, std::vector<std::pair<QVector3D, float>>& centers_with_radius, const int& size, QVector3D& col, bool transparent)
+void GLRender::DrawSphere(QOpenGLShaderProgram* shader, QOpenGLBuffer& sphere_vbo, QOpenGLBuffer& sphere_indicies, const QMatrix4x4& mvp, std::vector<std::pair<QVector3D, float>>& centers_with_radius, const int& size, QVector3D& col, bool transparent)
 {
 	if (centers_with_radius.empty()) return;
 
 	sphere_vbo.bind();
 	sphere_indicies.bind();
 
-	shaderBinding(base, std::vector<AdditionalBind>(), mvp);
+	std::vector<AdditionalBind> binds;
+	if (shader == pc_base) binds.push_back(COLOR);
+	if (shader == pt_base) binds.push_back(TEXTURE);
+
+	shaderBinding(shader, binds, mvp);
 
 	if (transparent)
 	{
@@ -1061,8 +1191,8 @@ void GLRender::DrawSphere(QOpenGLBuffer& sphere_vbo, QOpenGLBuffer& sphere_indic
 		transforms.setToIdentity();
 		transforms.translate(it->first);
 		transforms.scale(it->second);
-		base->setUniformValue("matrix", mvp * transforms);		//TODO replace name
-		base->setUniformValue("color", col);
+		shader->setUniformValue("matrix", mvp * transforms);		//TODO replace name
+		shader->setUniformValue("color", col);
 
 		glDrawElements(
 			GL_TRIANGLES,      // mode
@@ -1076,10 +1206,10 @@ void GLRender::DrawSphere(QOpenGLBuffer& sphere_vbo, QOpenGLBuffer& sphere_indic
 	sphere_indicies.release();
 	sphere_vbo.release();
 
-	base->release();
+	shader->release();
 }
 
-void GLRender::DrawSegments(QOpenGLBuffer& point_buffer, QOpenGLBuffer& index_buffer, const int& starter_index, const int& last_index, const QMatrix4x4& mvp, QVector3D& col, bool transparent)
+void GLRender::DrawSegments(QOpenGLShaderProgram* shader, QOpenGLBuffer& point_buffer, QOpenGLBuffer& index_buffer, const int& starter_index, const int& last_index, const QMatrix4x4& mvp, QVector3D& col, bool transparent)
 {
 	if (!elementbuffer.isCreated()) return;
 
@@ -1089,8 +1219,14 @@ void GLRender::DrawSegments(QOpenGLBuffer& point_buffer, QOpenGLBuffer& index_bu
 //	qDebug() << starter_index << " start ind" << "\n";
 //	qDebug() << last_index << " last ind" << "\n";
 
-	shaderBinding(base, std::vector<AdditionalBind>(), mvp);
-	base->setUniformValue("color", col);
+	std::vector<AdditionalBind> binds;
+	if (shader == pc_base) binds.push_back(COLOR);
+	if (shader == pt_base) binds.push_back(TEXTURE);
+
+	shaderBinding(shader, binds, mvp);
+
+	if (shader == p_base) shader->setUniformValue("color", col);
+
 
 	if (transparent)
 	{
@@ -1113,22 +1249,48 @@ void GLRender::DrawSegments(QOpenGLBuffer& point_buffer, QOpenGLBuffer& index_bu
 
 	elementbuffer.release();
 	cloud_vbo.release();
-	base->release();
+	shader->release();
 }
 
 void GLRender::renderPowerCrustObject(const QMatrix4x4& mvp, const QMatrix4x4& m)
 {
-
 	switch (sfg.getPowerCrustDrawObject())
 	{
 		case	RESULT:
+		{
+			elementbuffer.bind();
+			if (elementbuffer.size() == 0) return;
+			//qDebug() << point_draw_parts.size();
+			if (point_draw_parts.empty()) return;
+
+			int start = 0;
+	
+			if (points_colors.empty())		//we use uv
+			{
+				k_ind = 0;
+				DrawCells(pt_base, cloud_vbo, elementbuffer, start, point_draw_parts[0], mvp, QVector3D(0,0,0), false);
+				k_ind = 1;
+				start += point_draw_parts[0];
+				DrawCells(pt_base, cloud_vbo, elementbuffer, start, point_draw_parts[1], mvp, QVector3D(0, 0, 0), false);
+				k_ind = 2;
+				start += point_draw_parts[1];
+				DrawCells(pt_base, cloud_vbo, elementbuffer, start, point_draw_parts[2], mvp, QVector3D(0, 0, 0), false);
+				k_ind = 3;
+				start += point_draw_parts[2];
+				DrawCells(pt_base, cloud_vbo, elementbuffer, start, point_draw_parts[3], mvp, QVector3D(0, 0, 0), false);
+			}
+			else
+			{
+				DrawCells(pc_base, cloud_vbo, elementbuffer, start, elementbuffer.size() / sizeof(GLfloat), mvp, points_colors[0], false);
+			}
 			return;
+		}
 		case		DELAUNEY:
 		{
 			elementbuffer.bind();
 			if (elementbuffer.size() == 0) return;
 
-			DrawSegments(cloud_vbo, elementbuffer, 0, elementbuffer.size() / sizeof(GLfloat), mvp, colors[0], false);
+			DrawSegments(p_base, cloud_vbo, elementbuffer, 0, elementbuffer.size() / sizeof(GLfloat), mvp, colors[0], false);
 			return;
 		}
 		case		POWER_DIAGRAM:
@@ -1137,7 +1299,7 @@ void GLRender::renderPowerCrustObject(const QMatrix4x4& mvp, const QMatrix4x4& m
 			elementbuffer.bind();
 			if (elementbuffer.size() == 0) return;
 
-			DrawSegments(cloud_vbo, elementbuffer, 0, elementbuffer.size() / sizeof(GLfloat), mvp, colors[0],false);
+			DrawSegments(p_base, cloud_vbo, elementbuffer, 0, elementbuffer.size() / sizeof(GLfloat), mvp, colors[0],false);
 			return;
 		}
 		case		VORONOI_WITH_SURF_POINT:
@@ -1146,9 +1308,9 @@ void GLRender::renderPowerCrustObject(const QMatrix4x4& mvp, const QMatrix4x4& m
 			elementbuffer.bind();
 			if (elementbuffer.size() == 0) return;
 
-			DrawSegments(cloud_vbo, elementbuffer, 0, elementbuffer.size() / sizeof(GLfloat), mvp, points_colors[0]);
+			DrawSegments(p_base, cloud_vbo, elementbuffer, 0, elementbuffer.size() / sizeof(GLfloat), mvp, points_colors[0]);
 			//-------------------------------
-			DrawSphere(sphere_vbo, sphere_indicies, mvp, center_radius_pairs, center_draw_parts[0], colors[0]);
+			DrawSphere(p_base, sphere_vbo, sphere_indicies, mvp, center_radius_pairs, center_draw_parts[0], colors[0]);
 			return;
 		}
 		case		VORONOI_BY_CELL_FULL:
@@ -1181,10 +1343,10 @@ void GLRender::renderPowerCrustObject(const QMatrix4x4& mvp, const QMatrix4x4& m
 			elementbuffer.bind();
 			if (elementbuffer.size() == 0) return;
 
-			DrawSegments(cloud_vbo, elementbuffer, 0, elementbuffer.size() / sizeof(GLfloat), mvp, points_colors[0]);
+			DrawSegments(p_base, cloud_vbo, elementbuffer, 0, elementbuffer.size() / sizeof(GLfloat), mvp, points_colors[0]);
 			//-------------------------------
 
-			DrawSphere(sphere_vbo, sphere_indicies, mvp, center_radius_pairs, center_draw_parts[0], colors[0]);
+			DrawSphere(p_base, sphere_vbo, sphere_indicies, mvp, center_radius_pairs, center_draw_parts[0], colors[0]);
 
 			/*qDebug() << voronoi_polar_ball_centers.size() << " polar sphere drawing" << "\n";
 
@@ -1216,7 +1378,7 @@ void GLRender::renderPowerCrustObject(const QMatrix4x4& mvp, const QMatrix4x4& m
 			}*/
 
 			std::vector<std::pair<QVector3D, float>> poles(center_radius_pairs.begin() + center_draw_parts[0], center_radius_pairs.end());
-			DrawSphere(sphere_vbo, sphere_indicies, mvp, poles, center_draw_parts[1], colors[1]);
+			DrawSphere(p_base, sphere_vbo, sphere_indicies, mvp, poles, center_draw_parts[1], colors[1]);
 
 			/*qDebug() << voronoi_cell_centers.size() << " voronoi sphere drawing" << "\n";
 
@@ -1250,10 +1412,10 @@ void GLRender::renderPowerCrustObject(const QMatrix4x4& mvp, const QMatrix4x4& m
 			elementbuffer.bind();
 			if (elementbuffer.size() == 0) return;
 
-			DrawSegments(cloud_vbo, elementbuffer, 0, elementbuffer.size() / sizeof(GLfloat), mvp, points_colors[0]);
+			DrawSegments(p_base, cloud_vbo, elementbuffer, 0, elementbuffer.size() / sizeof(GLfloat), mvp, points_colors[0]);
 			//-------------------------------
 			std::vector<std::pair<QVector3D, float>> polar_balls = center_radius_pairs;
-			DrawSphere(sphere_vbo, sphere_indicies, mvp, polar_balls, center_draw_parts[0], colors[0]);
+			DrawSphere(p_base, sphere_vbo, sphere_indicies, mvp, polar_balls, center_draw_parts[0], colors[0]);
 			return;
 	}
 		case		POWER_DIAGRAM_CELL_WITH_NEIGHBOURS:
@@ -1261,15 +1423,15 @@ void GLRender::renderPowerCrustObject(const QMatrix4x4& mvp, const QMatrix4x4& m
 		//	DrawCells(cloud_vbo, elementbuffer, mvp, points_colors[0]);
 			if (point_draw_parts.size() == 0) return;
 
-			DrawSegments(cloud_vbo, elementbuffer, 0, point_draw_parts[0], mvp, points_colors[0]);
-			DrawSegments(cloud_vbo, elementbuffer, point_draw_parts[0], point_draw_parts[1], mvp, points_colors[1]);
+			DrawSegments(p_base, cloud_vbo, elementbuffer, 0, point_draw_parts[0], mvp, points_colors[0]);
+			DrawSegments(p_base, cloud_vbo, elementbuffer, point_draw_parts[0], point_draw_parts[1], mvp, points_colors[1]);
 				//-------------------------------
 
 			std::vector<std::pair<QVector3D, float>> polar_balls = center_radius_pairs;
-			DrawSphere(sphere_vbo, sphere_indicies, mvp, polar_balls, center_draw_parts[0], colors[0]);
+			DrawSphere(p_base, sphere_vbo, sphere_indicies, mvp, polar_balls, center_draw_parts[0], colors[0]);
 
 			std::vector<std::pair<QVector3D, float>> common_points(center_radius_pairs.begin() + center_draw_parts[0], center_radius_pairs.end());
-			DrawSphere(sphere_vbo, sphere_indicies, mvp, common_points, center_draw_parts[1], colors[1]);
+			DrawSphere(p_base, sphere_vbo, sphere_indicies, mvp, common_points, center_draw_parts[1], colors[1]);
 			return;
 		}
 		case		POLES:
@@ -1277,10 +1439,10 @@ void GLRender::renderPowerCrustObject(const QMatrix4x4& mvp, const QMatrix4x4& m
 			if (center_radius_pairs.size() == 0) return;
 
 			std::vector<std::pair<QVector3D, float>> surface_centers = center_radius_pairs;
-			DrawSphere(sphere_vbo, sphere_indicies, mvp, surface_centers, center_draw_parts[0], colors[0]);
+			DrawSphere(p_base, sphere_vbo, sphere_indicies, mvp, surface_centers, center_draw_parts[0], colors[0]);
 
 			std::vector<std::pair<QVector3D, float>> polar_balls(center_radius_pairs.begin() + center_draw_parts[0], center_radius_pairs.end());
-			DrawSphere(sphere_vbo, sphere_indicies, mvp, polar_balls, center_draw_parts[1], colors[1]);
+			DrawSphere(p_base, sphere_vbo, sphere_indicies, mvp, polar_balls, center_draw_parts[1], colors[1]);
 
 			return;
 		}
@@ -1291,14 +1453,14 @@ void GLRender::renderPowerCrustObject(const QMatrix4x4& mvp, const QMatrix4x4& m
 			if (center_radius_pairs.size() == 0) return;
 
 			std::vector<std::pair<QVector3D, float>> poles = center_radius_pairs;
-			DrawSphere(sphere_vbo, sphere_indicies, mvp, poles, center_draw_parts[0], colors[0]);
+			DrawSphere(p_base, sphere_vbo, sphere_indicies, mvp, poles, center_draw_parts[0], colors[0]);
 			return;
 		}
 		case  INNER_OUTER_POLES:
 		{
 			if (point_draw_parts.size() == 0) return;
-			DrawSegments(cloud_vbo, elementbuffer, 0, point_draw_parts[0], mvp, points_colors[0]);
-			DrawSegments(cloud_vbo, elementbuffer, point_draw_parts[0], point_draw_parts[1], mvp, points_colors[1]);
+			DrawSegments(p_base, cloud_vbo, elementbuffer, 0, point_draw_parts[0], mvp, points_colors[0]);
+			DrawSegments(p_base, cloud_vbo, elementbuffer, point_draw_parts[0], point_draw_parts[1], mvp, points_colors[1]);
 
 			return;
 		}
@@ -1306,14 +1468,14 @@ void GLRender::renderPowerCrustObject(const QMatrix4x4& mvp, const QMatrix4x4& m
 		{
 			if (point_draw_parts.size() == 0) return;
 
-			DrawSegments(cloud_vbo, elementbuffer, 0, point_draw_parts[0], mvp, points_colors[0]);
-			DrawSegments(cloud_vbo, elementbuffer, point_draw_parts[0], point_draw_parts[1], mvp, points_colors[1]);
+			DrawSegments(p_base, cloud_vbo, elementbuffer, 0, point_draw_parts[0], mvp, points_colors[0]);
+			DrawSegments(p_base, cloud_vbo, elementbuffer, point_draw_parts[0], point_draw_parts[1], mvp, points_colors[1]);
 
 			std::vector<std::pair<QVector3D, float>> surface_centers = center_radius_pairs;
-			DrawSphere(sphere_vbo, sphere_indicies, mvp, surface_centers, center_draw_parts[0], colors[0]);
+			DrawSphere(p_base, sphere_vbo, sphere_indicies, mvp, surface_centers, center_draw_parts[0], colors[0]);
 
 			std::vector<std::pair<QVector3D, float>> polar_balls(center_radius_pairs.begin() + center_draw_parts[0], center_radius_pairs.end());
-			DrawSphere(sphere_vbo, sphere_indicies, mvp, polar_balls, center_draw_parts[1], colors[1]);
+			DrawSphere(p_base, sphere_vbo, sphere_indicies, mvp, polar_balls, center_draw_parts[1], colors[1]);
 
 			return;
 		}
@@ -1322,7 +1484,7 @@ void GLRender::renderPowerCrustObject(const QMatrix4x4& mvp, const QMatrix4x4& m
 		//	qDebug() << point_draw_parts.size();
 			if (point_draw_parts.size() == 0) return;
 
-			DrawSegments(cloud_vbo, elementbuffer, 0, point_draw_parts[0], mvp, points_colors[0], false);
+			DrawSegments(p_base, cloud_vbo, elementbuffer, 0, point_draw_parts[0], mvp, points_colors[0], false);
 
 			return;
 		}
@@ -1331,7 +1493,7 @@ void GLRender::renderPowerCrustObject(const QMatrix4x4& mvp, const QMatrix4x4& m
 		//	qDebug() << point_draw_parts.size();
 			if (point_draw_parts.size() == 0) return;
 
-			DrawSegments(cloud_vbo, elementbuffer, 0, point_draw_parts[0], mvp, points_colors[0], false);
+			DrawSegments(p_base, cloud_vbo, elementbuffer, 0, point_draw_parts[0], mvp, points_colors[0], false);
 
 			return;
 		}

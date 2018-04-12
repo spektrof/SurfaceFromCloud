@@ -79,6 +79,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="diagram_types.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_glrender.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -102,6 +103,7 @@
     <ClCompile Include="src\glrender.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\graphicinterface.cpp" />
+    <ClCompile Include="src\power_diagram_paint.cpp" />
     <ClCompile Include="src\power_diagram.cpp" />
     <ClCompile Include="src\surfacegenerator.cpp" />
     <ClCompile Include="src\voronoi_dagram.cpp" />
